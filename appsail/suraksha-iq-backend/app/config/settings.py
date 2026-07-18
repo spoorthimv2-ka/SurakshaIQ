@@ -22,7 +22,10 @@ class Settings(BaseSettings):
 
     # Zoho Catalyst
     catalyst_project_id: Optional[str] = None
-    catalyst_api_key: Optional[str] = None
+    catalyst_environment: str = "Development"
+    catalyst_app_key: Optional[str] = None
+    catalyst_app_secret: Optional[str] = None
+    catalyst_base_url: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

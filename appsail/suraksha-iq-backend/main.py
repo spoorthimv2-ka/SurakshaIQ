@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import settings
 from app.api.v1.router import api_router
+from app.core.logger import setup_logging
+
+# Configure app-wide logging
+setup_logging()
 
 app = FastAPI(
     title=settings.app_name,
@@ -26,4 +30,4 @@ app.include_router(api_router, prefix=settings.api_v1_str)
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Basic health check endpoint."""
-    return {"status": "ok", "environment": settings.environment}
+    return {"status": "healthy", "database": "Catalyst Data Store", "sdk": "initialized"}
