@@ -113,3 +113,23 @@ class CrimeRepository(BaseCatalystRepository):
         except CatalystError as e:
             logger.error(f"Error fetching filtered crimes: {e}")
             raise RepositoryError(f"Failed to fetch filtered crimes: {e}")
+
+    async def count_by_date_range(self, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
+        """Counts crimes within an optional date range."""
+        try:
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE 1=1"
+            if date_from:
+                query += f" AND CREATEDTIME >= '{date_from}'"
+            if date_to:
+                query += f" AND CREATEDTIME <= '{date_to}'"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                first_row = result[0]
+                for table_data in first_row.values():
+                    for val in table_data.values():
+                        if isinstance(val, (int, float, str)) and str(val).isdigit():
+                            return int(val)
+            return 0
+        except CatalystError as e:
+            logger.error(f"Error counting crimes by date range: {e}")
+            raise RepositoryError(f"Failed to count crimes by date range: {e}")

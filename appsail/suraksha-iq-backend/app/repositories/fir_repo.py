@@ -108,3 +108,39 @@ class FIRRepository(BaseCatalystRepository):
         except CatalystError as e:
             logger.error(f"Error fetching filtered FIRs: {e}")
             raise RepositoryError(f"Failed to fetch filtered FIRs: {e}")
+
+    async def count_by_status(self, status: str) -> int:
+        """Counts FIRs by status."""
+        try:
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE status = '{status}'"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                first_row = result[0]
+                for table_data in first_row.values():
+                    for val in table_data.values():
+                        if isinstance(val, (int, float, str)) and str(val).isdigit():
+                            return int(val)
+            return 0
+        except CatalystError as e:
+            logger.error(f"Error counting FIRs by status {status}: {e}")
+            raise RepositoryError(f"Failed to count FIRs by status: {e}")
+
+    async def count_by_date_range(self, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
+        """Counts FIRs within an optional date range."""
+        try:
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE 1=1"
+            if date_from:
+                query += f" AND CREATEDTIME >= '{date_from}'"
+            if date_to:
+                query += f" AND CREATEDTIME <= '{date_to}'"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                first_row = result[0]
+                for table_data in first_row.values():
+                    for val in table_data.values():
+                        if isinstance(val, (int, float, str)) and str(val).isdigit():
+                            return int(val)
+            return 0
+        except CatalystError as e:
+            logger.error(f"Error counting FIRs by date range: {e}")
+            raise RepositoryError(f"Failed to count FIRs by date range: {e}")

@@ -35,3 +35,48 @@ class DashboardStatisticsResponse(BaseModel):
     total_count: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class DashboardSummaryResponse(BaseModel):
+    total_crimes: int
+    total_firs: int
+    active_firs: int
+    closed_firs: int
+    crimes_today: int
+    firs_today: int
+    registered_districts: int
+    registered_police_stations: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class RecentCrimeResponse(BaseModel):
+    ROWID: str
+    title: str
+    crime_type: str
+    status: str
+    CREATEDTIME: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class RecentFirResponse(BaseModel):
+    ROWID: str
+    fir_number: str
+    crime_id: str
+    status: str
+    CREATEDTIME: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CrimeTrendResponse(BaseModel):
+    period: str
+    count: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class DistrictSummaryResponse(BaseModel):
+    district_id: str
+    district_name: str
+    crime_count: int
+    fir_count: int
+    active_investigations: int
+
+    model_config = ConfigDict(from_attributes=True)
