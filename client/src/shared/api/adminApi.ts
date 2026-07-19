@@ -1,49 +1,102 @@
 import { apiClient } from 'services/api';
-import { buildCursorParams } from './pagination';
-import type { CursorPaginationParams, PaginatedResponse } from './pagination';
 
 export interface AdminUser {
-  id: string;
+  user_id: string;
+  officer_id?: string;
   name: string;
   email: string;
   role: string;
-  active: boolean;
+  district?: string;
+  station?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface AlertRule {
-  id: string;
+export interface AdminUserCreate {
   name: string;
-  condition: string;
-  enabled: boolean;
+  email: string;
+  role: string;
+  district?: string;
+  station?: string;
+  status?: string;
+}
+
+export interface AdminUserUpdate {
+  name?: string;
+  email?: string;
+  role?: string;
+  district?: string;
+  station?: string;
+  status?: string;
+}
+
+export interface RoleInfo {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface AdminStatistics {
+  total_users: number;
+  active_users: number;
+  inactive_users: number;
+  users_by_role: Array<{ role: string; count: number }>;
+  users_by_district: Array<{ district_id: string; district_name: string; count: number }>;
+}
+
+export interface AuditLog {
+  log_id: string;
+  action: string;
+  user: string;
+  target: string;
+  timestamp: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface UserFilters {
+  role?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export const adminApi = {
   users: {
-    list: (params?: CursorPaginationParams & Record<string, unknown>) =>
-      apiClient.get<PaginatedResponse<AdminUser>>('/admin/users', { params: buildCursorParams(params ?? {}) }),
+    list: (filters?: UserFilters) =>
+      apiClient.get<AdminUser[]>('/admin/users', { params: filters }),
 
-    create: (data: Partial<AdminUser>) => apiClient.post<AdminUser>('/admin/users', data),
+    get: (id: string) =>
+      apiClient.get<AdminUser>(`/admin/users/${id}`),
 
-    update: (id: string, data: Partial<AdminUser>) => apiClient.put<AdminUser>(`/admin/users/${id}`, data),
+    create: (data: AdminUserCreate) =>
+      apiClient.post<AdminUser>('/admin/users', data),
 
-    delete: (id: string) => apiClient.delete<void>(`/admin/users/${id}`),
+    update: (id: string, data: AdminUserUpdate) =>
+      apiClient.put<AdminUser>(`/admin/users/${id}`, data),
+
+    delete: (id: string) =>
+      apiClient.delete(`/admin/users/${id}`),
+
+    activate: (id: string) =>
+      apiClient.patch<AdminUser>(`/admin/users/${id}/activate`, {}),
+
+    deactivate: (id: string) =>
+      apiClient.patch<AdminUser>(`/admin/users/${id}/deactivate`, {}),
   },
 
   roles: {
-    list: () => apiClient.get<string[]>('/admin/roles'),
+    list: () =>
+      apiClient.get<RoleInfo[]>('/admin/roles'),
   },
 
-  alertRules: {
-    list: (params?: CursorPaginationParams & Record<string, unknown>) =>
-      apiClient.get<PaginatedResponse<AlertRule>>('/admin/alert-rules', {
-        params: buildCursorParams(params ?? {}),
-      }),
+  statistics: {
+    get: () =>
+      apiClient.get<AdminStatistics>('/admin/statistics'),
+  },
 
-    create: (data: Partial<AlertRule>) => apiClient.post<AlertRule>('/admin/alert-rules', data),
-
-    update: (id: string, data: Partial<AlertRule>) =>
-      apiClient.put<AlertRule>(`/admin/alert-rules/${id}`, data),
-
-    delete: (id: string) => apiClient.delete<void>(`/admin/alert-rules/${id}`),
+  auditLogs: {
+    list: (params?: { limit?: number; offset?: number }) =>
+      apiClient.get<AuditLog[]>('/admin/audit-logs', { params }),
   },
 };
