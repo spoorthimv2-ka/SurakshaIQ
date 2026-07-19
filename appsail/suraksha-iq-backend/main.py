@@ -4,7 +4,6 @@ from app.config.settings import settings
 from app.api.v1.router import api_router
 from app.core.logger import setup_logging
 
-# Configure app-wide logging
 setup_logging()
 
 app = FastAPI(
@@ -13,26 +12,26 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    debug=settings.environment == "development",
 )
 
-# CORS configuration
+cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()] if settings.cors_origins else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to the frontend domains
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-# Include the main v1 API router
 app.include_router(api_router, prefix=settings.api_v1_str)
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Basic health check endpoint."""
     return {
         "status": "healthy",
+        "environment": settings.environment,
         "database": "Catalyst Data Store",
         "authentication": "Catalyst",
-        "sdk": "initialized"
     }

@@ -7,11 +7,12 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "INFO"
     api_v1_str: str = "/api/v1"
-    
+    debug: bool = False
+
     # JWT / Authentication (Superseded by Catalyst Auth, kept for backward compatibility)
     jwt_secret_key: str = "your-super-secret-key-change-in-production"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24  # 1 day default
+    access_token_expire_minutes: int = 60 * 24
 
     # Databases
     postgres_url: Optional[str] = None
@@ -26,12 +27,15 @@ class Settings(BaseSettings):
     catalyst_app_key: Optional[str] = None
     catalyst_app_secret: Optional[str] = None
     catalyst_base_url: Optional[str] = None
-    
+
     # Zoho Catalyst Authentication
     catalyst_auth_url: Optional[str] = None
     catalyst_client_id: Optional[str] = None
     catalyst_client_secret: Optional[str] = None
     catalyst_redirect_uri: Optional[str] = None
+
+    # Security
+    cors_origins: str = "*"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
