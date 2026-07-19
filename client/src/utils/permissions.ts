@@ -11,7 +11,8 @@ export type ModuleKey =
   | 'alerts'
   | 'reports'
   | 'admin'
-  | 'crime-management';
+  | 'crime-management'
+  | 'fir-management';
 
 export interface NavItem {
   module: ModuleKey;
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { module: 'reports', label: 'Reports', path: '/reports' },
   { module: 'admin', label: 'Administration', path: '/admin' },
   { module: 'crime-management', label: 'Crime Management', path: '/crimes' },
+  { module: 'fir-management', label: 'FIR Management', path: '/firs' },
 ];
 
 export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
@@ -103,6 +105,15 @@ export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
   ],
   admin: ['SYSTEM_ADMINISTRATOR'],
   'crime-management': [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  'fir-management': [
     'STATE_COMMAND',
     'RANGE_IG',
     'DISTRICT_SP',

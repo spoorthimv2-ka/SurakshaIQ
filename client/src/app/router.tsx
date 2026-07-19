@@ -102,6 +102,10 @@ export const router = createBrowserRouter([
                 children: [{ path: 'crimes', element: lazy(() => import('features/crime-management/pages/CrimeManagement')) }],
               },
               {
+                element: <RoleProtectedRoute roles={MODULE_ROLES['fir-management']} />,
+                children: [{ path: 'firs', element: lazy(() => import('features/fir-management/pages/FirManagement')) }],
+              },
+              {
                 path: 'district/:districtId',
                 element: lazy(() => import('features/district-comparison/pages/DistrictDetail')),
               },

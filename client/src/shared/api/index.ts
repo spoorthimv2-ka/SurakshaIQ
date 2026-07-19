@@ -42,3 +42,5 @@ export { profileApi } from './profileApi';
 export type { OfficerProfileResponse } from './profileApi';
 export { crimesApi } from './crimesApi';
 export type { Crime, CrimeCreate, CrimeUpdate, CrimeFilters } from './crimesApi';
+export { firsApi } from './firsApi';
+export type { Fir, FirCreate, FirUpdate, FirFilters } from './firsApi';
