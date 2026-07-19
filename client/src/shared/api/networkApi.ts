@@ -1,30 +1,57 @@
 import { apiClient } from 'services/api';
-import { buildCursorParams } from './pagination';
-import type { CursorPaginationParams, PaginatedResponse } from './pagination';
 
 export interface NetworkNode {
   id: string;
   label: string;
   type: string;
+  properties?: Record<string, any>;
 }
 
 export interface NetworkEdge {
   source: string;
   target: string;
-  weight: number;
+  type?: string;
+  properties?: Record<string, any>;
 }
 
-export interface NetworkGraph {
+export interface NetworkStatistics {
+  total_nodes: number;
+  total_edges: number;
+  connected_offenders: number;
+  connected_stations: number;
+  connected_districts: number;
+  average_connections: number;
+}
+
+export interface NetworkGraphResponse {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  statistics: NetworkStatistics;
+  metadata?: Record<string, any>;
+}
+
+export interface NetworkSearchResponse {
+  query: string;
   nodes: NetworkNode[];
   edges: NetworkEdge[];
 }
 
 export const networkApi = {
-  list: (params?: CursorPaginationParams & Record<string, unknown>) =>
-    apiClient.get<PaginatedResponse<NetworkGraph>>('/network-analysis', {
-      params: buildCursorParams(params ?? {}),
-    }),
+  getGraph: (limit = 500) =>
+    apiClient.get<NetworkGraphResponse>('/network', { params: { limit } }),
 
-  getGraph: (id: string, config?: { signal?: AbortSignal }) =>
-    apiClient.get<NetworkGraph>(`/network-analysis/${id}`, config),
+  getStatistics: () =>
+    apiClient.get<NetworkStatistics>('/network/statistics'),
+
+  getOffenderNetwork: (offenderId: string) =>
+    apiClient.get<NetworkGraphResponse>(`/network/offenders/${offenderId}`),
+
+  getStationNetwork: (stationId: string) =>
+    apiClient.get<NetworkGraphResponse>(`/network/stations/${stationId}`),
+
+  getDistrictNetwork: (districtId: string) =>
+    apiClient.get<NetworkGraphResponse>(`/network/districts/${districtId}`),
+
+  search: (query: string, limit = 50) =>
+    apiClient.get<NetworkSearchResponse>('/network/search', { params: { q: query, limit } }),
 };

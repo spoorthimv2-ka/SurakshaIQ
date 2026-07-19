@@ -56,7 +56,7 @@ const NetworkGraphView: React.FC<NetworkGraphViewProps> = ({
       .data(simulationLinks)
       .join('line')
       .attr('stroke', '#94a3b8')
-      .attr('stroke-width', (d) => Math.max(1, d.weight));
+      .attr('stroke-width', (d) => Math.max(1, (d as any).weight ?? 1));
 
     const node = svg
       .append('g')

@@ -23,7 +23,7 @@ export type { Anomaly } from './anomaliesApi';
 export { repeatOffendersApi } from './repeatOffendersApi';
 export type { RepeatOffender, RepeatOffenderDetail, RepeatOffenderStatistics, RepeatOffenderFilters } from './repeatOffendersApi';
 export { networkApi } from './networkApi';
-export type { NetworkGraph, NetworkNode, NetworkEdge } from './networkApi';
+export type { NetworkNode, NetworkEdge, NetworkStatistics, NetworkGraphResponse, NetworkSearchResponse } from './networkApi';
 export { riskScoringApi } from './riskScoringApi';
 export type { RiskScore } from './riskScoringApi';
 export { alertsApi } from './alertsApi';
