@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from .admin.routes import router as admin_router
 from .alerts.routes import router as alerts_router
 from .anomaly.routes import router as anomaly_router
 from .auth.routes import router as auth_router
@@ -17,6 +18,7 @@ from .users.routes import router as users_router
 
 api_router = APIRouter()
 
+api_router.include_router(admin_router, prefix="/admin", tags=["Admin"])
 api_router.include_router(alerts_router, prefix="/alerts", tags=["Alerts"])
 api_router.include_router(anomaly_router, prefix="/anomaly", tags=["Anomaly"])
 api_router.include_router(auth_router, prefix="/auth", tags=["Auth"])
