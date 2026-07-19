@@ -10,6 +10,7 @@ class CatalystManager:
     """
     _instance = None
     _initialized = False
+    _is_unavailable = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -18,7 +19,7 @@ class CatalystManager:
 
     def initialize(self):
         """Initializes the Zoho Catalyst SDK if not already initialized."""
-        if not self._initialized:
+        if not self._initialized and not self._is_unavailable:
             try:
                 # AppSail environments natively inject Catalyst context, but we provide a fallback
                 # or explicit init if credentials are set in settings (for local testing).
@@ -30,21 +31,30 @@ class CatalystManager:
                         app_secret=settings.catalyst_app_secret
                     )
                     logger.info("Catalyst SDK initialized with explicit credentials.")
+                    self._initialized = True
                 else:
-                    zcatalyst_sdk.initialize()
-                    logger.info("Catalyst SDK initialized using ambient environment variables.")
-                self._initialized = True
+                    try:
+                        zcatalyst_sdk.initialize()
+                        logger.info("Catalyst SDK initialized using ambient environment variables.")
+                        self._initialized = True
+                    except Exception:
+                        logger.warning("No Catalyst ambient environment found. Operating in Catalyst unavailable state.")
+                        self._is_unavailable = True
             except CatalystError as e:
                 logger.error(f"Failed to initialize Catalyst SDK: {e}")
-                raise CatalystConnectionError(str(e))
+                self._is_unavailable = True
             except Exception as e:
                 logger.error(f"Unexpected error initializing Catalyst SDK: {e}")
-                raise CatalystConnectionError("Unexpected initialization error")
+                self._is_unavailable = True
 
     def get_datastore(self):
         """Returns the Catalyst Data Store client."""
         if not self._initialized:
             self.initialize()
+        
+        if self._is_unavailable:
+            raise CatalystConnectionError("Catalyst is currently unavailable.")
+
         try:
             return zcatalyst_sdk.datastore()
         except CatalystError as e:
@@ -55,6 +65,10 @@ class CatalystManager:
         """Returns the Catalyst ZCQL client for complex queries."""
         if not self._initialized:
             self.initialize()
+        
+        if self._is_unavailable:
+            raise CatalystConnectionError("Catalyst is currently unavailable.")
+
         try:
             return zcatalyst_sdk.zcql()
         except CatalystError as e:

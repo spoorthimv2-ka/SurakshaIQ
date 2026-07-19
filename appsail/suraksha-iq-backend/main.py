@@ -30,4 +30,9 @@ app.include_router(api_router, prefix=settings.api_v1_str)
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Basic health check endpoint."""
-    return {"status": "healthy", "database": "Catalyst Data Store", "sdk": "initialized"}
+    return {
+        "status": "healthy",
+        "database": "Catalyst Data Store",
+        "authentication": "Catalyst",
+        "sdk": "initialized"
+    }
