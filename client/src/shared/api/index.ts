@@ -25,7 +25,7 @@ export type { RepeatOffender, RepeatOffenderDetail, RepeatOffenderStatistics, Re
 export { networkApi } from './networkApi';
 export type { NetworkNode, NetworkEdge, NetworkStatistics, NetworkGraphResponse, NetworkSearchResponse } from './networkApi';
 export { riskScoringApi } from './riskScoringApi';
-export type { RiskScore } from './riskScoringApi';
+export type { RiskFactor, RiskPrediction, DistrictRisk, StationRisk, RiskSummary } from './riskScoringApi';
 export { alertsApi } from './alertsApi';
 export type { AlertRecord } from './alertsApi';
 export { casesApi } from './casesApi';
