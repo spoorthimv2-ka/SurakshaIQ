@@ -2,12 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
+  base: '/app/',      // ⭐ THIS IS THE FIX
+
   plugins: [react()],
+
   resolve: {
     alias: {
-      // Match tsconfig baseUrl: "src" so all bare imports resolve
       app: path.resolve(__dirname, 'src/app'),
       features: path.resolve(__dirname, 'src/features'),
       shared: path.resolve(__dirname, 'src/shared'),
@@ -25,10 +26,12 @@ export default defineConfig({
       store: path.resolve(__dirname, 'src/store'),
     },
   },
+
   server: {
     port: 3000,
     open: true,
   },
+
   build: {
     outDir: 'build',
     sourcemap: false,

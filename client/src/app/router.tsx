@@ -122,4 +122,6 @@ export const router = createBrowserRouter([
       { path: '*', element: lazy(() => import('features/errors/pages/NotFound')) },
     ],
   },
-]);
+], {
+  basename: import.meta.env.VITE_BASE_PATH || '/',
+});
