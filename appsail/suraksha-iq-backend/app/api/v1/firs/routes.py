@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
 from app.api.deps import get_current_officer
@@ -18,6 +18,7 @@ router = APIRouter()
     description="Retrieves a paginated list of FIRs with optional filters.",
 )
 async def get_firs(
+    request: Request,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     fir_number: Optional[str] = Query(None, description="Search by FIR number"),
@@ -31,7 +32,7 @@ async def get_firs(
 ):
     """Retrieves FIRs with optional filters."""
     try:
-        repo = FIRRepository()
+        repo = FIRRepository(request)
         service = FIRService(repo)
 
         firs = await service.find_all_with_filters(
@@ -62,12 +63,13 @@ async def get_firs(
     description="Retrieves a single FIR by its ROWID.",
 )
 async def get_fir(
+    request: Request,
     fir_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves an FIR by ID."""
     try:
-        repo = FIRRepository()
+        repo = FIRRepository(request)
         service = FIRService(repo)
 
         fir = await service.get_by_id(fir_id)
@@ -93,12 +95,13 @@ async def get_fir(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_fir(
+    request: Request,
     payload: FIRCreate,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Creates a new FIR."""
     try:
-        repo = FIRRepository()
+        repo = FIRRepository(request)
         service = FIRService(repo)
 
         result = await service.create(payload.model_dump())
@@ -123,13 +126,14 @@ async def create_fir(
     description="Updates an existing FIR record.",
 )
 async def update_fir(
+    request: Request,
     fir_id: str,
     payload: FIRUpdate,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Updates an existing FIR."""
     try:
-        repo = FIRRepository()
+        repo = FIRRepository(request)
         service = FIRService(repo)
 
         update_data = payload.model_dump(exclude_unset=True)
@@ -158,12 +162,13 @@ async def update_fir(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_fir(
+    request: Request,
     fir_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Deletes an FIR."""
     try:
-        repo = FIRRepository()
+        repo = FIRRepository(request)
         service = FIRService(repo)
 
         await service.delete(fir_id)

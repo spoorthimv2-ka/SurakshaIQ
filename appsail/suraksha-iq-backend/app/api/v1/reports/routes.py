@@ -16,6 +16,7 @@ router = APIRouter()
     description="Retrieves a paginated list of reports."
 )
 async def get_reports(
+    request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user: Dict[str, Any] = Depends(get_current_officer),
@@ -23,7 +24,7 @@ async def get_reports(
     """Retrieves reports from Catalyst Data Store."""
     try:
         offset = (page - 1) * size
-        service = ReportService(ReportRepository())
+        service = ReportService(request, ReportRepository(request))
         reports = await service.get_reports(limit=size, offset=offset)
         return [ReportResponse.model_validate(r) for r in reports]
     except Exception as e:
@@ -40,11 +41,12 @@ async def get_reports(
     description="Retrieves report summary counts."
 )
 async def get_report_summary(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves report summary from Catalyst Data Store."""
     try:
-        service = ReportService(ReportRepository())
+        service = ReportService(request, ReportRepository(request))
         summary = await service.get_summary()
         return ReportSummaryResponse(**summary)
     except Exception as e:
@@ -61,11 +63,12 @@ async def get_report_summary(
     description="Retrieves available report types."
 )
 async def get_report_types(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves available report types."""
     try:
-        service = ReportService(ReportRepository())
+        service = ReportService(request, ReportRepository(request))
         types = await service.get_report_types()
         return [ReportTypeInfo(**t) for t in types]
     except Exception as e:
@@ -82,12 +85,13 @@ async def get_report_types(
     description="Retrieves specific report metadata."
 )
 async def get_report_details(
+    request: Request,
     report_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves report details from Catalyst Data Store."""
     try:
-        service = ReportService(ReportRepository())
+        service = ReportService(request, ReportRepository(request))
         report = await service.get_report(report_id)
 
         if not report:
@@ -116,7 +120,7 @@ async def generate_report(
     """Generates a new report deterministically from existing data."""
     try:
         officer_id = current_user.get("ROWID", current_user.get("id", ""))
-        service = ReportService(ReportRepository())
+        service = ReportService(request, ReportRepository(request))
         result = await service.generate_report(
             report_type=report_request.report_type.value,
             officer_id=officer_id,
@@ -138,12 +142,13 @@ async def generate_report(
     description="Deletes a report."
 )
 async def delete_report(
+    request: Request,
     report_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Deletes a report from Catalyst Data Store."""
     try:
-        service = ReportService(ReportRepository())
+        service = ReportService(request, ReportRepository(request))
         result = await service.delete_report(report_id)
         return {"message": "Report deleted successfully", "success": result}
     except HTTPException:

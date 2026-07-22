@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -8,8 +9,8 @@ class DistrictRepository(BaseCatalystRepository):
     """
     Repository for District entity backed by Catalyst Data Store.
     """
-    def __init__(self):
-        super().__init__(table_name="District")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="District")
 
     async def find_by_code(self, code: str) -> Optional[Dict[str, Any]]:
         """Finds a district by its unique code."""

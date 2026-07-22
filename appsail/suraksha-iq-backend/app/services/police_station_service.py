@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.core.logger import logger
 from app.core.exceptions import DataValidationError, RepositoryError
@@ -6,7 +7,8 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class PoliceStationService:
     """Service layer for PoliceStation entity."""
     
-    def __init__(self, repo: PoliceStationRepository):
+    def __init__(self, request: Request, repo: PoliceStationRepository):
+        self.request = request
         self.repo = repo
 
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:

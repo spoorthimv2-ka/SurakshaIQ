@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -9,8 +10,8 @@ class AlertRepository(BaseCatalystRepository):
     Repository for Alert entity backed by Catalyst Data Store.
     """
 
-    def __init__(self):
-        super().__init__(table_name="Alert")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Alert")
 
     async def find_by_district(self, district_id: str, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves alerts scoped to a specific district or statewide (district_id is null)."""

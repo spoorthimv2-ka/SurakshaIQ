@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any
+from fastapi import Request
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.catalyst import catalyst_manager
 from app.core.exceptions import RepositoryError
@@ -8,11 +9,24 @@ from app.core.logger import logger
 class CatalystOfficerRepository:
     """Authentication repository backed by Zoho Catalyst Data Store."""
 
-    def __init__(self):
+    def __init__(self, request: Request):
+        self.request = request
         self.table_name = "Officer"
-        self.datastore = catalyst_manager.get_datastore()
-        self.zcql = catalyst_manager.get_zcql()
-        self.table = self.datastore.table(self.table_name)
+        self._table = None
+
+    @property
+    def datastore(self):
+        return catalyst_manager.get_datastore(self.request)
+
+    @property
+    def zcql(self):
+        return catalyst_manager.get_zcql(self.request)
+
+    @property
+    def table(self):
+        if self._table is None:
+            self._table = self.datastore.table(self.table_name)
+        return self._table
 
     async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer by email using ZCQL."""

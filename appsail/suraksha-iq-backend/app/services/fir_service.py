@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from fastapi import Request
 from app.repositories.fir_repo import FIRRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
@@ -11,11 +12,12 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class FIRService:
     """Service layer for FIR entity."""
     
-    def __init__(self, repo: FIRRepository):
+    def __init__(self, request: Request, repo: FIRRepository):
+        self.request = request
         self.repo = repo
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
-        self.officer_repo = OfficerRepository()
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
+        self.officer_repo = OfficerRepository(request)
 
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Creates a new FIR."""

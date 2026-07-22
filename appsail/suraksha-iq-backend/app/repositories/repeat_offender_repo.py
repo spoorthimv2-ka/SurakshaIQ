@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -9,8 +10,8 @@ class RepeatOffenderRepository(BaseCatalystRepository):
     Repository for repeat offender aggregations backed by Catalyst Data Store.
     """
 
-    def __init__(self):
-        super().__init__(table_name="Criminal")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Criminal")
 
     async def find_active(self, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves active criminals with pagination."""

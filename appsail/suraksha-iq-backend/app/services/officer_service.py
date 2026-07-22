@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.officer_repo import OfficerRepository
 from app.repositories.officer_sql_repo import OfficerSQLRepository
 from app.core.logger import logger
@@ -26,7 +27,8 @@ def build_officer_dict(officer) -> Dict[str, Any]:
 class OfficerService:
     """Service layer orchestrating Officer operations."""
     
-    def __init__(self, repo: OfficerRepository):
+    def __init__(self, request: Request, repo: OfficerRepository):
+        self.request = request
         self.repo = repo
 
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:

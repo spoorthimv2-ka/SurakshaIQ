@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
+from fastapi import Request
 
 from app.repositories.predictive_risk_repo import PredictiveRiskRepository
 from app.repositories.crime_repo import CrimeRepository
@@ -21,14 +22,15 @@ from app.schemas.risk import (
 class PredictiveRiskService:
     """Service layer for predictive risk analysis."""
 
-    def __init__(self):
-        self.repo = PredictiveRiskRepository()
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
-        self.hotspot_repo = HotspotRepository()
-        self.repeat_offender_repo = RepeatOffenderRepository()
+    def __init__(self, request: Request):
+        self.request = request
+        self.repo = PredictiveRiskRepository(request)
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
+        self.hotspot_repo = HotspotRepository(request)
+        self.repeat_offender_repo = RepeatOffenderRepository(request)
 
     async def get_predictions(self, officer: Dict[str, Any], limit: int = 100) -> List[RiskPrediction]:
         """Retrieves risk predictions for all districts and stations."""

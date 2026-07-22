@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from fastapi import Request
 from app.repositories.crime_repo import CrimeRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
@@ -10,10 +11,11 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class CrimeService:
     """Service layer for Crime entity."""
     
-    def __init__(self, repo: CrimeRepository):
+    def __init__(self, request: Request, repo: CrimeRepository):
+        self.request = request
         self.repo = repo
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
 
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Creates a new Crime."""

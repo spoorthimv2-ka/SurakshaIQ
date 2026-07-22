@@ -27,7 +27,7 @@ async def global_search(
 ):
     """Performs global search across all entities."""
     try:
-        service = SearchService(SearchRepository())
+        service = SearchService(request, SearchRepository(request))
         result = await service.search(
             keyword=keyword,
             category=category,
@@ -53,13 +53,14 @@ async def global_search(
     description="Returns top matching keywords for autocomplete."
 )
 async def search_suggestions(
+    request: Request,
     keyword: str = Query(..., min_length=1, description="Partial keyword"),
     limit: int = Query(10, ge=1, le=10),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Returns search suggestions."""
     try:
-        service = SearchService(SearchRepository())
+        service = SearchService(request, SearchRepository(request))
         suggestions = await service.get_suggestions(keyword=keyword, limit=limit)
         return [SearchSuggestion(**s) for s in suggestions]
     except Exception as e:
@@ -76,11 +77,12 @@ async def search_suggestions(
     description="Returns available filter options for global search."
 )
 async def search_filters(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Returns available search filters."""
     try:
-        service = SearchService(SearchRepository())
+        service = SearchService(request, SearchRepository(request))
         filters = await service.get_filters()
         return SearchFilters(**filters)
     except Exception as e:

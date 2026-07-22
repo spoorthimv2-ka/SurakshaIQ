@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -9,8 +10,8 @@ class HotspotRepository(BaseCatalystRepository):
     Repository for hotspot aggregations backed by Catalyst Data Store.
     """
 
-    def __init__(self):
-        super().__init__(table_name="Crime")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Crime")
 
     async def count_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes in a district within an optional date range."""

@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
+from fastapi import Request
 
 from app.repositories.alert_repo import AlertRepository
 from app.repositories.crime_repo import CrimeRepository
@@ -15,13 +16,14 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class AlertService:
     """Service layer for Alert entity."""
     
-    def __init__(self, repo: AlertRepository):
+    def __init__(self, request: Request, repo: AlertRepository):
+        self.request = request
         self.repo = repo
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.hotspot_repo = HotspotRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.hotspot_repo = HotspotRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
 
     async def get_alerts(self, status_filter: Optional[str] = None, severity: Optional[str] = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieves alerts with optional filters."""

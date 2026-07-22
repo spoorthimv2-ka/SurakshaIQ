@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from collections import defaultdict
+from fastapi import Request
 
 from app.repositories.network_repo import NetworkRepository
 from app.repositories.crime_repo import CrimeRepository
@@ -21,14 +22,15 @@ from app.schemas.network import (
 class NetworkService:
     """Service layer for network analysis."""
 
-    def __init__(self):
-        self.repo = NetworkRepository()
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
-        self.officer_repo = OfficerRepository()
-        self.criminal_repo = CriminalRepository()
+    def __init__(self, request: Request):
+        self.request = request
+        self.repo = NetworkRepository(request)
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
+        self.officer_repo = OfficerRepository(request)
+        self.criminal_repo = CriminalRepository(request)
 
     async def get_network(self, officer: Dict[str, Any], limit: int = 500) -> NetworkGraphResponse:
         """Builds the full relationship graph from Catalyst Data Store."""

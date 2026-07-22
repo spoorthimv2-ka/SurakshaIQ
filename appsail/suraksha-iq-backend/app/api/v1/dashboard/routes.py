@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
 from app.api.deps import get_current_officer
@@ -24,11 +24,12 @@ router = APIRouter()
     description="Retrieves high-level dashboard summary counts.",
 )
 async def get_dashboard_summary(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves dashboard summary from Catalyst Data Store."""
     try:
-        service = DashboardService()
+        service = DashboardService(request)
         summary = await service.get_summary(current_user)
         return summary
     except HTTPException:
@@ -47,12 +48,13 @@ async def get_dashboard_summary(
     description="Retrieves the most recent crimes.",
 )
 async def get_recent_crimes(
+    request: Request,
     limit: int = Query(10, ge=1, le=100),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves recent crimes from Catalyst Data Store."""
     try:
-        service = DashboardService()
+        service = DashboardService(request)
         crimes = await service.get_recent_crimes(current_user, limit=limit)
         return crimes
     except HTTPException:
@@ -71,12 +73,13 @@ async def get_recent_crimes(
     description="Retrieves the most recent FIRs.",
 )
 async def get_recent_firs(
+    request: Request,
     limit: int = Query(10, ge=1, le=100),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves recent FIRs from Catalyst Data Store."""
     try:
-        service = DashboardService()
+        service = DashboardService(request)
         firs = await service.get_recent_firs(current_user, limit=limit)
         return firs
     except HTTPException:
@@ -95,6 +98,7 @@ async def get_recent_firs(
     description="Retrieves aggregated crime counts grouped by day, week, or month.",
 )
 async def get_crime_trends(
+    request: Request,
     interval: str = Query("daily", description="Aggregation interval: daily, weekly, or monthly"),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
@@ -102,7 +106,7 @@ async def get_crime_trends(
     try:
         if interval not in ("daily", "weekly", "monthly"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid interval. Use daily, weekly, or monthly.")
-        service = DashboardService()
+        service = DashboardService(request)
         trends = await service.get_crime_trends(current_user, interval=interval)
         return trends
     except HTTPException:
@@ -121,11 +125,12 @@ async def get_crime_trends(
     description="Retrieves per-district crime and FIR aggregates.",
 )
 async def get_district_summary(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves district summary from Catalyst Data Store."""
     try:
-        service = DashboardService()
+        service = DashboardService(request)
         summary = await service.get_district_summary(current_user)
         return summary
     except HTTPException:

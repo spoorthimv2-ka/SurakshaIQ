@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.user_repo import UserRepository
 from app.core.logger import logger
 from app.core.exceptions import DataValidationError, RepositoryError
@@ -6,7 +7,8 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class UserService:
     """Service layer for User entity."""
     
-    def __init__(self, repo: UserRepository):
+    def __init__(self, request: Request, repo: UserRepository):
+        self.request = request
         self.repo = repo
 
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
 from app.api.deps import get_current_officer
@@ -15,6 +15,7 @@ router = APIRouter()
     description="Retrieves a list of alerts with optional filters.",
 )
 async def get_alerts(
+    request: Request,
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by status (e.g. ACTIVE)"),
     severity: Optional[str] = Query(None, description="Filter by severity (e.g. HIGH)"),
     limit: int = Query(20, ge=1, le=100),
@@ -23,7 +24,7 @@ async def get_alerts(
 ):
     """Retrieves alerts scoped by jurisdiction."""
     try:
-        service = AlertService(AlertRepository())
+        service = AlertService(AlertRepository(request))
         alerts = await service.get_alerts(status_filter=status_filter, severity=severity, limit=limit, offset=offset)
         return [AlertResponse.model_validate(a) for a in alerts]
     except HTTPException:
@@ -42,11 +43,12 @@ async def get_alerts(
     description="Retrieves alert summary counts.",
 )
 async def get_alert_summary(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves alert summary from Catalyst Data Store."""
     try:
-        service = AlertService(AlertRepository())
+        service = AlertService(AlertRepository(request))
         summary = await service.get_summary()
         return AlertSummary(**summary)
     except HTTPException:
@@ -65,13 +67,14 @@ async def get_alert_summary(
     description="Retrieves active alerts.",
 )
 async def get_active_alerts(
+    request: Request,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves active alerts from Catalyst Data Store."""
     try:
-        service = AlertService(AlertRepository())
+        service = AlertService(AlertRepository(request))
         alerts = await service.get_active_alerts(limit=limit, offset=offset)
         return [AlertResponse.model_validate(a) for a in alerts]
     except HTTPException:
@@ -90,12 +93,13 @@ async def get_active_alerts(
     description="Retrieves a single alert by its ROWID.",
 )
 async def get_alert(
+    request: Request,
     alert_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves an alert by ID."""
     try:
-        service = AlertService(AlertRepository())
+        service = AlertService(AlertRepository(request))
         alert = await service.get_by_id(alert_id)
         if not alert:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
@@ -116,12 +120,13 @@ async def get_alert(
     description="Acknowledges an alert.",
 )
 async def acknowledge_alert(
+    request: Request,
     alert_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Acknowledges an alert."""
     try:
-        service = AlertService(AlertRepository())
+        service = AlertService(AlertRepository(request))
         result = await service.acknowledge_alert(alert_id)
         return AlertResponse.model_validate(result)
     except HTTPException:
@@ -140,12 +145,13 @@ async def acknowledge_alert(
     description="Resolves an alert.",
 )
 async def resolve_alert(
+    request: Request,
     alert_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Resolves an alert."""
     try:
-        service = AlertService(AlertRepository())
+        service = AlertService(AlertRepository(request))
         result = await service.resolve_alert(alert_id)
         return AlertResponse.model_validate(result)
     except HTTPException:

@@ -14,10 +14,11 @@ router = APIRouter()
 
 @router.post("/login")
 async def login(
-    request: LoginRequest,
+    request: Request,
+    body: LoginRequest,
 ) -> Dict[str, Any]:
-    auth_service = AuthService()
-    officer = await auth_service.login(request.email, request.password)
+    auth_service = AuthService(request)
+    officer = await auth_service.login(body.email, body.password)
     return officer
 
 @router.post("/logout")
@@ -28,12 +29,14 @@ async def logout(request: Request):
 
 @router.get("/me")
 async def read_users_me(
+    request: Request,
     current_officer: Dict[str, Any] = Depends(get_current_officer)
 ):
     return current_officer
 
 @router.get("/sensitive-data")
 async def read_sensitive_data(
+    request: Request,
     current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.VIEW_PII]))
 ):
     return {"message": "You have access to sensitive PII.", "officer_id": current_officer.get("ROWID")}

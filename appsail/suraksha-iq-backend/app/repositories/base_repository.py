@@ -1,24 +1,39 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.catalyst import catalyst_manager
 from app.core.exceptions import RepositoryError, DataValidationError
 from app.core.logger import logger
+
 
 class BaseCatalystRepository:
     """
     Generic CRUD base repository backed by Catalyst Data Store.
     Expects a table_name to be defined by subclasses.
     """
-    def __init__(self, table_name: str):
+
+    def __init__(self, request: Request, table_name: str):
         if not table_name:
             raise ValueError("table_name must be provided")
+        if not isinstance(request, Request):
+            raise ValueError("A FastAPI Request object is required for Catalyst initialization.")
+        self.request = request
         self.table_name = table_name
-        self.datastore = catalyst_manager.get_datastore()
-        self.zcql = catalyst_manager.get_zcql()
+        self._table = None
+
+    @property
+    def datastore(self):
+        return catalyst_manager.get_datastore(self.request)
+
+    @property
+    def zcql(self):
+        return catalyst_manager.get_zcql(self.request)
 
     def get_table(self):
         """Returns the Catalyst Table instance."""
-        return self.datastore.table(self.table_name)
+        if self._table is None:
+            self._table = self.datastore.table(self.table_name)
+        return self._table
 
     async def create(self, row_data: Dict[str, Any]) -> Dict[str, Any]:
         """Creates a new record in the Catalyst Data Store."""

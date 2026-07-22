@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional
+from fastapi import Request
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import SearchResult, SearchResponse, SearchSuggestion, SearchFilters
 from app.core.logger import logger
@@ -19,7 +20,8 @@ class SearchService:
         "Report": "Reports",
     }
 
-    def __init__(self, repo: SearchRepository):
+    def __init__(self, request: Request, repo: SearchRepository):
+        self.request = request
         self.repo = repo
 
     async def search(

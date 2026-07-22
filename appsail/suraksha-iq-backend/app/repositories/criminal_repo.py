@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -8,8 +9,8 @@ class CriminalRepository(BaseCatalystRepository):
     """
     Repository for Criminal entity backed by Catalyst Data Store.
     """
-    def __init__(self):
-        super().__init__(table_name="Criminal")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Criminal")
 
     async def search(self, search_term: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Performs a text search on criminal name or alias."""

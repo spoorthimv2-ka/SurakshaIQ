@@ -1,5 +1,6 @@
 from typing import Optional, List, Tuple, Dict, Any
 from datetime import datetime, timezone, timedelta
+from fastapi import Request
 from app.repositories.crime_repo import CrimeRepository
 from app.repositories.fir_repo import FIRRepository
 from app.repositories.alert_repo import AlertRepository
@@ -27,12 +28,13 @@ class DashboardService:
     Replaces the old SQLAlchemy-based DashboardRepository with Catalyst Data Store queries.
     """
 
-    def __init__(self):
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.alert_repo = AlertRepository()
-        self.district_repo = DistrictRepository()
-        self.police_station_repo = PoliceStationRepository()
+    def __init__(self, request: Request):
+        self.request = request
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.alert_repo = AlertRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.police_station_repo = PoliceStationRepository(request)
 
     async def get_kpis(
         self,

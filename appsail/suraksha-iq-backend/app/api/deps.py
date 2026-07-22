@@ -54,7 +54,7 @@ async def get_current_user(
     token = auth.split(" ")[1]
     payload = verify_access_token(token)
     officer_id = payload.get("sub")
-    repo = CatalystOfficerRepository()
+    repo = CatalystOfficerRepository(request)
     officer = await repo.find_by_id(officer_id)
     if not officer:
         raise_unauthorized("Officer not found.")

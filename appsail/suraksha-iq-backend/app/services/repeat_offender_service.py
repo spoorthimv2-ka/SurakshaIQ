@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
+from fastapi import Request
 
 from app.repositories.repeat_offender_repo import RepeatOffenderRepository
 from app.repositories.crime_repo import CrimeRepository
@@ -19,12 +20,13 @@ from app.schemas.repeat_offender import (
 class RepeatOffenderService:
     """Service layer for repeat offender analysis."""
 
-    def __init__(self):
-        self.repo = RepeatOffenderRepository()
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
+    def __init__(self, request: Request):
+        self.request = request
+        self.repo = RepeatOffenderRepository(request)
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
 
     async def get_repeat_offenders(
         self,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any
 
 from app.api.deps import get_current_officer
@@ -16,6 +16,7 @@ router = APIRouter()
     description="Retrieves district-level rollups and comparisons (if officer roles permit)."
 )
 async def get_district_analytics(
+    request: Request,
     district_id: str,
     start_date: Optional[str] = Query(None, description="Start date (UTC)"),
     end_date: Optional[str] = Query(None, description="End date (UTC)"),
@@ -23,12 +24,12 @@ async def get_district_analytics(
 ):
     """Retrieves district analytics from Catalyst Data Store."""
     try:
-        district_repo = DistrictRepository()
+        district_repo = DistrictRepository(request)
         district = await district_repo.find_by_id(district_id)
         if not district:
             raise HTTPException(status_code=404, detail="District not found")
 
-        service = DashboardService()
+        service = DashboardService(request)
         stats = await service.get_statistics(current_user)
 
         total_crimes = 0

@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
+from fastapi import Request
 from app.repositories.hotspot_repo import HotspotRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
@@ -18,11 +19,12 @@ class HotspotService:
 
     SEVERITY_ORDER = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
-    def __init__(self):
-        self.repo = HotspotRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
-        self.fir_repo = FIRRepository()
+    def __init__(self, request: Request):
+        self.request = request
+        self.repo = HotspotRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
+        self.fir_repo = FIRRepository(request)
 
     async def get_hotspots(
         self,

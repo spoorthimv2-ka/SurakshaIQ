@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
 from app.api.deps import get_current_officer
@@ -18,6 +18,7 @@ router = APIRouter()
     description="Retrieves a paginated list of crimes with optional filters.",
 )
 async def get_crimes(
+    request: Request,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     keyword: Optional[str] = Query(None, description="Search keyword across title, description, or crime type"),
@@ -31,7 +32,7 @@ async def get_crimes(
 ):
     """Retrieves crimes with optional filters."""
     try:
-        repo = CrimeRepository()
+        repo = CrimeRepository(request)
         service = CrimeService(repo)
 
         crimes = await service.find_all_with_filters(
@@ -62,12 +63,13 @@ async def get_crimes(
     description="Retrieves a single crime by its ROWID.",
 )
 async def get_crime(
+    request: Request,
     crime_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves a Crime by ID."""
     try:
-        repo = CrimeRepository()
+        repo = CrimeRepository(request)
         service = CrimeService(repo)
 
         crime = await service.get_by_id(crime_id)
@@ -93,12 +95,13 @@ async def get_crime(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_crime(
+    request: Request,
     payload: CrimeCreate,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Creates a new Crime."""
     try:
-        repo = CrimeRepository()
+        repo = CrimeRepository(request)
         service = CrimeService(repo)
 
         result = await service.create(payload.model_dump())
@@ -123,13 +126,14 @@ async def create_crime(
     description="Updates an existing crime record.",
 )
 async def update_crime(
+    request: Request,
     crime_id: str,
     payload: CrimeUpdate,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Updates an existing Crime."""
     try:
-        repo = CrimeRepository()
+        repo = CrimeRepository(request)
         service = CrimeService(repo)
 
         update_data = payload.model_dump(exclude_unset=True)
@@ -158,12 +162,13 @@ async def update_crime(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_crime(
+    request: Request,
     crime_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Deletes a Crime."""
     try:
-        repo = CrimeRepository()
+        repo = CrimeRepository(request)
         service = CrimeService(repo)
 
         await service.delete(crime_id)

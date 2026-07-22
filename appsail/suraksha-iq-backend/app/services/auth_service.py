@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from fastapi import Request
 
 from app.models.enums import ROLE_PERMISSIONS_MAP, Role
 from app.repositories.officer_repo import OfficerRepository
@@ -11,10 +12,11 @@ from app.security.utils import raise_unauthorized, verify_password
 class AuthService:
     """Authentication orchestration over backend JWT + Catalyst Data Store records."""
 
-    def __init__(self, officer_repo: OfficerRepository | None = None):
-        self.officer_repo = officer_repo or OfficerRepository()
-        self.officer_service = OfficerService(self.officer_repo)
-        self.officer_auth_repo = CatalystOfficerRepository()
+    def __init__(self, request: Request, officer_repo: OfficerRepository | None = None):
+        self.request = request
+        self.officer_repo = officer_repo or OfficerRepository(request)
+        self.officer_service = OfficerService(request, self.officer_repo)
+        self.officer_auth_repo = CatalystOfficerRepository(request)
 
     def _get_permissions(self, role_str: str) -> list[str]:
         try:

@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+from fastapi import Request
 from app.repositories.report_repo import ReportRepository
 from app.repositories.crime_repo import CrimeRepository
 from app.repositories.fir_repo import FIRRepository
@@ -18,18 +19,19 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class ReportService:
     """Service layer for Report entity."""
     
-    def __init__(self, repo: ReportRepository):
+    def __init__(self, request: Request, repo: ReportRepository):
+        self.request = request
         self.repo = repo
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.hotspot_repo = HotspotRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
-        self.alert_repo = AlertRepository()
-        self.anomaly_repo = AnomalyRepository()
-        self.network_repo = NetworkRepository()
-        self.repeat_offender_repo = RepeatOffenderRepository()
-        self.predictive_risk_repo = PredictiveRiskRepository()
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.hotspot_repo = HotspotRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
+        self.alert_repo = AlertRepository(request)
+        self.anomaly_repo = AnomalyRepository(request)
+        self.network_repo = NetworkRepository(request)
+        self.repeat_offender_repo = RepeatOffenderRepository(request)
+        self.predictive_risk_repo = PredictiveRiskRepository(request)
 
     async def get_reports(self, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieves reports with pagination."""

@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.repositories.user_repo import UserRepository
 from app.repositories.officer_repo import OfficerRepository
@@ -14,12 +15,12 @@ class AdminRepository(BaseCatalystRepository):
     Reuses existing repositories for data retrieval.
     """
 
-    def __init__(self):
-        super().__init__(table_name="User")
-        self.user_repo = UserRepository()
-        self.officer_repo = OfficerRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="User")
+        self.user_repo = UserRepository(request)
+        self.officer_repo = OfficerRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
 
     async def find_users(self, limit: int = 100, offset: int = 0, role: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves users with optional filters, merged with officer data."""

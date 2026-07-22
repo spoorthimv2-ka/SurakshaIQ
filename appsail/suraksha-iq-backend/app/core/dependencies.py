@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 
 # Repositories
 from app.repositories.user_repo import UserRepository
@@ -23,57 +23,57 @@ from app.services.alert_service import AlertService
 from app.services.report_service import ReportService
 
 # Dependency Providers for Repositories
-def get_user_repo() -> UserRepository:
-    return UserRepository()
+def get_user_repo(request: Request) -> UserRepository:
+    return UserRepository(request)
 
-def get_officer_repo() -> OfficerRepository:
-    return OfficerRepository()
+def get_officer_repo(request: Request) -> OfficerRepository:
+    return OfficerRepository(request)
 
-def get_district_repo() -> DistrictRepository:
-    return DistrictRepository()
+def get_district_repo(request: Request) -> DistrictRepository:
+    return DistrictRepository(request)
 
-def get_police_station_repo() -> PoliceStationRepository:
-    return PoliceStationRepository()
+def get_police_station_repo(request: Request) -> PoliceStationRepository:
+    return PoliceStationRepository(request)
 
-def get_crime_repo() -> CrimeRepository:
-    return CrimeRepository()
+def get_crime_repo(request: Request) -> CrimeRepository:
+    return CrimeRepository(request)
 
-def get_fir_repo() -> FIRRepository:
-    return FIRRepository()
+def get_fir_repo(request: Request) -> FIRRepository:
+    return FIRRepository(request)
 
-def get_criminal_repo() -> CriminalRepository:
-    return CriminalRepository()
+def get_criminal_repo(request: Request) -> CriminalRepository:
+    return CriminalRepository(request)
 
-def get_alert_repo() -> AlertRepository:
-    return AlertRepository()
+def get_alert_repo(request: Request) -> AlertRepository:
+    return AlertRepository(request)
 
-def get_report_repo() -> ReportRepository:
-    return ReportRepository()
+def get_report_repo(request: Request) -> ReportRepository:
+    return ReportRepository(request)
 
 # Dependency Providers for Services
-def get_user_service(repo: UserRepository = Depends(get_user_repo)) -> UserService:
-    return UserService(repo)
+def get_user_service(request: Request, repo: UserRepository = Depends(get_user_repo)) -> UserService:
+    return UserService(request, repo)
 
-def get_officer_service(repo: OfficerRepository = Depends(get_officer_repo)) -> OfficerService:
-    return OfficerService(repo)
+def get_officer_service(request: Request, repo: OfficerRepository = Depends(get_officer_repo)) -> OfficerService:
+    return OfficerService(request, repo)
 
-def get_district_service(repo: DistrictRepository = Depends(get_district_repo)) -> DistrictService:
-    return DistrictService(repo)
+def get_district_service(request: Request, repo: DistrictRepository = Depends(get_district_repo)) -> DistrictService:
+    return DistrictService(request, repo)
 
-def get_police_station_service(repo: PoliceStationRepository = Depends(get_police_station_repo)) -> PoliceStationService:
-    return PoliceStationService(repo)
+def get_police_station_service(request: Request, repo: PoliceStationRepository = Depends(get_police_station_repo)) -> PoliceStationService:
+    return PoliceStationService(request, repo)
 
-def get_crime_service(repo: CrimeRepository = Depends(get_crime_repo)) -> CrimeService:
-    return CrimeService(repo)
+def get_crime_service(request: Request, repo: CrimeRepository = Depends(get_crime_repo)) -> CrimeService:
+    return CrimeService(request, repo)
 
-def get_fir_service(repo: FIRRepository = Depends(get_fir_repo)) -> FIRService:
-    return FIRService(repo)
+def get_fir_service(request: Request, repo: FIRRepository = Depends(get_fir_repo)) -> FIRService:
+    return FIRService(request, repo)
 
-def get_criminal_service(repo: CriminalRepository = Depends(get_criminal_repo)) -> CriminalService:
-    return CriminalService(repo)
+def get_criminal_service(request: Request, repo: CriminalRepository = Depends(get_criminal_repo)) -> CriminalService:
+    return CriminalService(request, repo)
 
-def get_alert_service(repo: AlertRepository = Depends(get_alert_repo)) -> AlertService:
-    return AlertService(repo)
+def get_alert_service(request: Request, repo: AlertRepository = Depends(get_alert_repo)) -> AlertService:
+    return AlertService(request, repo)
 
-def get_report_service(repo: ReportRepository = Depends(get_report_repo)) -> ReportService:
-    return ReportService(repo)
+def get_report_service(request: Request, repo: ReportRepository = Depends(get_report_repo)) -> ReportService:
+    return ReportService(request, repo)

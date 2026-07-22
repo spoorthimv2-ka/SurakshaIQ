@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.repositories.crime_repo import CrimeRepository
 from app.repositories.fir_repo import FIRRepository
@@ -21,19 +22,19 @@ class SearchRepository(BaseCatalystRepository):
     Reuses existing repositories for data retrieval.
     """
 
-    def __init__(self):
-        super().__init__(table_name="Search")
-        self.crime_repo = CrimeRepository()
-        self.fir_repo = FIRRepository()
-        self.hotspot_repo = HotspotRepository()
-        self.repeat_offender_repo = RepeatOffenderRepository()
-        self.network_repo = NetworkRepository()
-        self.predictive_risk_repo = PredictiveRiskRepository()
-        self.anomaly_repo = AnomalyRepository()
-        self.alert_repo = AlertRepository()
-        self.report_repo = ReportRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Search")
+        self.crime_repo = CrimeRepository(request)
+        self.fir_repo = FIRRepository(request)
+        self.hotspot_repo = HotspotRepository(request)
+        self.repeat_offender_repo = RepeatOffenderRepository(request)
+        self.network_repo = NetworkRepository(request)
+        self.predictive_risk_repo = PredictiveRiskRepository(request)
+        self.anomaly_repo = AnomalyRepository(request)
+        self.alert_repo = AlertRepository(request)
+        self.report_repo = ReportRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
 
     async def search_crimes(self, keyword: str, district_id: Optional[str] = None, station_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """Searches crimes by keyword with optional filters."""

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
 
@@ -20,6 +20,7 @@ router = APIRouter()
     description="Retrieves a paginated list of repeat offenders with optional filters.",
 )
 async def get_repeat_offenders(
+    request: Request,
     district_id: Optional[str] = Query(None, description="Filter by district ID"),
     station_id: Optional[str] = Query(None, description="Filter by police station ID"),
     crime_type: Optional[str] = Query(None, description="Filter by crime type"),
@@ -32,7 +33,7 @@ async def get_repeat_offenders(
 ):
     """Retrieves repeat offenders from Catalyst Data Store."""
     try:
-        service = RepeatOffenderService()
+        service = RepeatOffenderService(request)
         offenders = await service.get_repeat_offenders(
             current_user,
             district_id=district_id,
@@ -61,6 +62,7 @@ async def get_repeat_offenders(
     description="Returns the highest-ranked repeat offenders.",
 )
 async def get_top_repeat_offenders(
+    request: Request,
     limit: int = Query(10, ge=1, le=100),
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
@@ -68,7 +70,7 @@ async def get_top_repeat_offenders(
 ):
     """Retrieves top repeat offenders from Catalyst Data Store."""
     try:
-        service = RepeatOffenderService()
+        service = RepeatOffenderService(request)
         offenders = await service.get_top_repeat_offenders(
             current_user,
             limit=limit,
@@ -92,12 +94,13 @@ async def get_top_repeat_offenders(
     description="Retrieves detailed information for a specific offender.",
 )
 async def get_offender_details(
+    request: Request,
     offender_id: str,
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves offender details from Catalyst Data Store."""
     try:
-        service = RepeatOffenderService()
+        service = RepeatOffenderService(request)
         detail = await service.get_offender_details(current_user, offender_id)
         if not detail:
             raise HTTPException(
@@ -121,13 +124,14 @@ async def get_offender_details(
     description="Retrieves aggregated repeat offender statistics.",
 )
 async def get_repeat_offender_statistics(
+    request: Request,
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves repeat offender statistics from Catalyst Data Store."""
     try:
-        service = RepeatOffenderService()
+        service = RepeatOffenderService(request)
         stats = await service.get_statistics(current_user, start_date=start_date, end_date=end_date)
         return stats
     except HTTPException:

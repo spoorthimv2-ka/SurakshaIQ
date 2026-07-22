@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -8,8 +9,8 @@ class UserRepository(BaseCatalystRepository):
     """
     Repository for User entity backed by Catalyst Data Store.
     """
-    def __init__(self):
-        super().__init__(table_name="User")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="User")
 
     async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Retrieves a user by their email address."""

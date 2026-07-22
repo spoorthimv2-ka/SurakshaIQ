@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -8,8 +9,8 @@ class OfficerRepository(BaseCatalystRepository):
     """
     Repository for Officer entity backed by Catalyst Data Store.
     """
-    def __init__(self):
-        super().__init__(table_name="Officer")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Officer")
 
     async def find_by_user_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer profile by their associated user ID."""

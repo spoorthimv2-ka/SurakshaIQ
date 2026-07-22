@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
@@ -9,8 +10,8 @@ class PredictiveRiskRepository(BaseCatalystRepository):
     Repository for predictive risk aggregations backed by Catalyst Data Store.
     """
 
-    def __init__(self):
-        super().__init__(table_name="Crime")
+    def __init__(self, request: Request):
+        super().__init__(request, table_name="Crime")
 
     async def get_risk_data(self, limit: int = 1000) -> Dict[str, Any]:
         """Retrieves aggregated risk data from multiple tables."""

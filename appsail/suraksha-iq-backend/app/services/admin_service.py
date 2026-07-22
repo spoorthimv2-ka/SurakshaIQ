@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional
+from fastapi import Request
 from app.repositories.admin_repo import AdminRepository
 from app.repositories.user_repo import UserRepository
 from app.repositories.officer_repo import OfficerRepository
@@ -11,12 +12,13 @@ from app.core.exceptions import DataValidationError, RepositoryError
 class AdminService:
     """Service layer for Admin operations."""
 
-    def __init__(self, repo: AdminRepository):
+    def __init__(self, request: Request, repo: AdminRepository):
+        self.request = request
         self.repo = repo
-        self.user_repo = UserRepository()
-        self.officer_repo = OfficerRepository()
-        self.district_repo = DistrictRepository()
-        self.station_repo = PoliceStationRepository()
+        self.user_repo = UserRepository(request)
+        self.officer_repo = OfficerRepository(request)
+        self.district_repo = DistrictRepository(request)
+        self.station_repo = PoliceStationRepository(request)
 
     async def get_users(self, limit: int = 100, offset: int = 0, role: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves users with optional filters, merged with officer data."""

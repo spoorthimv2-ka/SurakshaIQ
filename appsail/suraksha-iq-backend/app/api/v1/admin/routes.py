@@ -18,6 +18,7 @@ router = APIRouter()
     description="Retrieves a paginated list of users with merged officer profiles."
 )
 async def get_users(
+    request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     role: Optional[str] = Query(None),
@@ -27,7 +28,7 @@ async def get_users(
     """Retrieves users from Catalyst Data Store."""
     try:
         offset = (page - 1) * size
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         users = await service.get_users(limit=size, offset=offset, role=role, status=status)
         return users
     except HTTPException:
@@ -46,12 +47,13 @@ async def get_users(
     description="Retrieves a single user with merged officer profile."
 )
 async def get_user(
+    request: Request,
     user_id: str,
     current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
 ):
     """Retrieves user details from Catalyst Data Store."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         user = await service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -78,7 +80,7 @@ async def create_user(
 ):
     """Creates a new user."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         result = await service.create_user(user_data.model_dump())
         await service.create_audit_log(
             action="CREATE_USER",
@@ -110,7 +112,7 @@ async def update_user(
 ):
     """Updates a user."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         result = await service.update_user(user_id, user_data.model_dump(exclude_none=True))
         await service.create_audit_log(
             action="UPDATE_USER",
@@ -140,7 +142,7 @@ async def delete_user(
 ):
     """Deletes a user."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         result = await service.delete_user(user_id)
         await service.create_audit_log(
             action="DELETE_USER",
@@ -171,7 +173,7 @@ async def activate_user(
 ):
     """Activates a user."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         result = await service.activate_user(user_id)
         await service.create_audit_log(
             action="ACTIVATE_USER",
@@ -202,7 +204,7 @@ async def deactivate_user(
 ):
     """Deactivates a user."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         result = await service.deactivate_user(user_id)
         await service.create_audit_log(
             action="DEACTIVATE_USER",
@@ -227,11 +229,12 @@ async def deactivate_user(
     description="Retrieves available system roles."
 )
 async def get_roles(
+    request: Request,
     current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_ROLES])),
 ):
     """Retrieves available roles."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         roles = await service.get_roles()
         return [RoleInfo(**r) for r in roles]
     except Exception as e:
@@ -248,11 +251,12 @@ async def get_roles(
     description="Retrieves aggregated admin statistics."
 )
 async def get_statistics(
+    request: Request,
     current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
 ):
     """Retrieves admin statistics."""
     try:
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         stats = await service.get_statistics()
         return AdminStatistics(**stats)
     except Exception as e:
@@ -269,6 +273,7 @@ async def get_statistics(
     description="Retrieves audit log entries."
 )
 async def get_audit_logs(
+    request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=100),
     current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
@@ -276,7 +281,7 @@ async def get_audit_logs(
     """Retrieves audit logs."""
     try:
         offset = (page - 1) * size
-        service = AdminService(AdminRepository())
+        service = AdminService(request, AdminRepository(request))
         logs = await service.get_audit_logs(limit=size, offset=offset)
         return [AuditLog(**log) for log in logs]
     except Exception as e:
