@@ -1,7 +1,27 @@
 from typing import List, Dict, Any, Optional
 from app.repositories.officer_repo import OfficerRepository
+from app.repositories.officer_sql_repo import OfficerSQLRepository
 from app.core.logger import logger
 from app.core.exceptions import DataValidationError, RepositoryError
+from app.database.postgres.connection import async_session_maker
+
+def build_officer_dict(officer) -> Dict[str, Any]:
+    role_str = officer.role.value if hasattr(officer.role, "value") else officer.role
+    d: Dict[str, Any] = {
+        "ROWID": str(officer.id),
+        "user_id": officer.catalyst_user_id,
+        "name": officer.name,
+        "email": officer.email,
+        "role": role_str,
+        "badge_number": None,
+        "status": "ACTIVE",
+        "station_id": str(officer.police_station_id) if officer.police_station_id else None,
+    }
+    if officer.created_at:
+        d["CREATEDTIME"] = officer.created_at.isoformat()
+    if officer.updated_at:
+        d["MODIFIEDTIME"] = officer.updated_at.isoformat()
+    return d
 
 class OfficerService:
     """Service layer orchestrating Officer operations."""
@@ -76,3 +96,22 @@ class OfficerService:
         created_officer = await self.repo.create(new_officer_data)
         logger.info(f"Provisioned new officer for Catalyst user {catalyst_id}")
         return created_officer
+
+    async def ensure_sql_officer(self, officer_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Transition-period sync: guarantee a PostgreSQL row exists for Catalyst officers."""
+        email = officer_data.get("email")
+        if not email:
+            return officer_data
+        role_str = officer_data.get("role", "STATION_HOUSE_OFFICER")
+        async with async_session_maker() as session:
+            repo = OfficerSQLRepository()
+            officer = await repo.find_by_email(email, session)
+            if officer:
+                return build_officer_dict(officer)
+            officer = await repo.create_with_password({
+                "catalyst_user_id": officer_data.get("user_id", ""),
+                "name": officer_data.get("name", ""),
+                "email": email,
+                "role": role_str,
+            }, None, session)
+            return build_officer_dict(officer)

@@ -17,6 +17,7 @@ class Officer(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     role: Mapped[Role] = mapped_column(SQLEnum(Role, native_enum=False, length=50), nullable=False)
     rank: Mapped[str | None] = mapped_column(String(100), nullable=True)
     designation: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Foreign Keys (nullable because Admins or State-level officers might not belong to a specific station)
     police_station_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("police_stations.id"), index=True, nullable=True)

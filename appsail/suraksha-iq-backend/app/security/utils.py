@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from fastapi import HTTPException, status
 import logging
+import bcrypt
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,14 @@ def raise_forbidden(detail: str = "Operation not permitted") -> None:
         status_code=status.HTTP_403_FORBIDDEN,
         detail=detail,
     )
+
+def hash_password(plain: str) -> str:
+    """Hashes a plaintext password using bcrypt."""
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def verify_password(plain: str, hashed: str) -> bool:
+    """Verifies a plaintext password against a bcrypt hash."""
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 def get_catalyst_auth_context(catalyst_user: Dict[str, Any]) -> Dict[str, Any]:
     """

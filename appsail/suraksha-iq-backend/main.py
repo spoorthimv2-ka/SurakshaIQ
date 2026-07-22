@@ -33,5 +33,5 @@ async def health_check():
         "status": "healthy",
         "environment": settings.environment,
         "database": "Catalyst Data Store",
-        "authentication": "Catalyst",
+        "authentication": "JWT",
     }

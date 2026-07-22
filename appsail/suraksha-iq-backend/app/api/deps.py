@@ -1,59 +1,76 @@
 from fastapi import Depends, Request, HTTPException, status
 from typing import Dict, Any
 
-from app.services.auth_service import AuthService
 from app.models.enums import Role, Permission, ROLE_PERMISSIONS_MAP
 from app.security.utils import raise_unauthorized, raise_forbidden
-from app.core.exceptions import CatalystConnectionError
+from app.security.jwt import verify_access_token
+from app.repositories.catalyst_officer_repo import CatalystOfficerRepository
 
-async def get_auth_service() -> AuthService:
-    try:
-        return AuthService()
-    except CatalystConnectionError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Catalyst authentication is unavailable locally."
-        )
 
-async def require_authenticated_user(
-    request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
-) -> Dict[str, Any]:
-    """
-    Validates that a valid Catalyst session exists for the request.
-    Returns the Catalyst user identity.
-    """
-    try:
-        catalyst_user = await auth_service.validate_session(request)
-        if not catalyst_user:
-            raise_unauthorized("Authentication required.")
-        return catalyst_user
-    except Exception as e:
-        raise_unauthorized(str(e))
+def _get_attr(officer: Dict[str, Any], key: str, default=None):
+    if isinstance(officer, dict):
+        return officer.get(key, default)
+    return getattr(officer, key, default)
+
+
+def _build_officer_dict(officer: Dict[str, Any]) -> Dict[str, Any]:
+    role_val = _get_attr(officer, "role", "")
+    if isinstance(role_val, dict):
+        role_str = role_val.get("display_value") or role_val.get("label") or role_val.get("name") or ""
+    else:
+        role_str = str(role_val) if role_val else ""
+
+    row_id = _get_attr(officer, "ROWID") or _get_attr(officer, "row_id") or _get_attr(officer, "id") or ""
+    catalyst_user_id = _get_attr(officer, "user_id") or _get_attr(officer, "catalyst_user_id") or ""
+    name = _get_attr(officer, "name") or ""
+    email = _get_attr(officer, "email") or ""
+    police_station_id = _get_attr(officer, "police_station_id") or _get_attr(officer, "station_id")
+    created_at = _get_attr(officer, "CREATEDTIME") or _get_attr(officer, "created_at")
+    updated_at = _get_attr(officer, "MODIFIEDTIME") or _get_attr(officer, "updated_at")
+
+    d: Dict[str, Any] = {
+        "ROWID": str(row_id),
+        "user_id": str(catalyst_user_id),
+        "name": name,
+        "email": email,
+        "role": role_str,
+        "badge_number": None,
+        "status": "ACTIVE",
+        "station_id": str(police_station_id) if police_station_id else None,
+    }
+    if created_at:
+        d["CREATEDTIME"] = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+    if updated_at:
+        d["MODIFIEDTIME"] = updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
+    return d
+
 
 async def get_current_user(
     request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
 ) -> Dict[str, Any]:
-    """
-    Retrieves the full authenticated user (Officer) profile from the Data Store,
-    mapped from the Catalyst session identity.
-    """
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise_unauthorized("Not authenticated")
+    token = auth.split(" ")[1]
+    payload = verify_access_token(token)
+    officer_id = payload.get("sub")
+    repo = CatalystOfficerRepository()
+    officer = await repo.find_by_id(officer_id)
+    if not officer:
+        raise_unauthorized("Officer not found.")
+    d = _build_officer_dict(officer)
+    permissions = []
     try:
-        user = await auth_service.get_current_user(request)
-        if not user:
-            raise_unauthorized("User profile not found in system.")
-        return user
-    except Exception as e:
-        raise_unauthorized(str(e))
+        role_enum = Role(d.get("role", ""))
+        permissions = [p.value for p in ROLE_PERMISSIONS_MAP.get(role_enum, [])]
+    except ValueError:
+        pass
+    d["permissions"] = permissions
+    return d
 
-# get_current_officer is kept for backward compatibility with existing routes
 async def get_current_officer(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """
-    Alias for get_current_user to maintain backward compatibility.
-    """
     return current_user
 
 class RequireRole:
@@ -71,7 +88,7 @@ class RequireRole:
 
 class RequirePermission:
     """
-    Dependency class to enforce Permission-based access control.
+    Dependency class to enforce permission-based access control.
     """
     def __init__(self, required_permissions: list[Permission]):
         self.required_permissions = required_permissions
