@@ -17,7 +17,7 @@ app = FastAPI(
     debug=settings.environment == "development",
 )
 
-cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()] if settings.cors_origins else ["*"]
+cors_origins = settings.cors_origins
 
 app.add_middleware(
     CORSMiddleware,

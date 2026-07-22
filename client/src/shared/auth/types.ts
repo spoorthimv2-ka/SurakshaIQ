@@ -13,26 +13,31 @@ export interface Officer {
   id: string;
   name: string;
   email: string;
-  rank: string;
-  designation: string;
+  rank?: string;
+  designation?: string;
   role: UserRole;
-  jurisdiction: {
+  jurisdiction?: {
     type: Jurisdiction;
     stationId?: string;
     districtId?: string;
     rangeId?: string;
   };
   permissions: string[];
+  ROWID?: string;
+  user_id?: string;
+  station_id?: string;
 }
 
 export interface AuthContextType {
-  officer: Officer | null;
+  user: Officer | null;
+  token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (...roles: UserRole[]) => boolean;
-  initializeFromCatalyst: () => Promise<void>;
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {

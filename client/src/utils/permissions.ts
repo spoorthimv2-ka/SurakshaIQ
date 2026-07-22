@@ -164,7 +164,7 @@ export function canViewDistrict(officer: Officer | null, districtId: string): bo
   }
 
   if (role === 'DISTRICT_SP') {
-    return jurisdiction.districtId === districtId;
+    return jurisdiction?.districtId === districtId;
   }
 
   return false;

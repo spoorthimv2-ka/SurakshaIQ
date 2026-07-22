@@ -153,3 +153,34 @@ class DashboardService:
             )
             for did, data in district_map.items()
         ]
+
+    async def get_statistics(self, officer: Dict[str, Any]) -> Dict[str, Any]:
+        """Returns aggregated statistics compatible with legacy callers."""
+        all_crimes = await self.crime_repo.find_all(limit=10000)
+        all_firs = await self.fir_repo.find_all(limit=10000)
+
+        category_counts: Dict[str, int] = {}
+        status_counts: Dict[str, int] = {}
+        district_counts: Dict[str, int] = {}
+
+        for c in all_crimes:
+            ct = c.get("crime_type", "UNKNOWN")
+            category_counts[ct] = category_counts.get(ct, 0) + 1
+            st = c.get("status", "ACTIVE")
+            status_counts[st] = status_counts.get(st, 0) + 1
+            did = c.get("district_id", "UNKNOWN")
+            district_counts[did] = district_counts.get(did, 0) + 1
+
+        total_count = sum(v for v in category_counts.values())
+
+        by_district = [
+            {"district_id": k, "district_name": k, "count": v}
+            for k, v in district_counts.items()
+        ]
+
+        return {
+            "by_category": [{"crime_type": k, "count": v} for k, v in category_counts.items()],
+            "by_district": by_district,
+            "by_status": [{"status": k, "count": v} for k, v in status_counts.items()],
+            "total_count": total_count,
+        }

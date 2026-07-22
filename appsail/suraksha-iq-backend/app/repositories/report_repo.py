@@ -8,8 +8,8 @@ class ReportRepository(BaseCatalystRepository):
     """
     Repository for Report entity backed by Catalyst Data Store.
     """
-    def __init__(self):
-        super().__init__(table_name="Report")
+    def __init__(self, request):
+        super().__init__(request, table_name="Report")
 
     async def find_recent(self, limit: int = 10, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves recent reports."""

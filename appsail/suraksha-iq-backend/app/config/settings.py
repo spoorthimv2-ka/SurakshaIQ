@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     catalyst_redirect_uri: Optional[str] = None
 
     # Security
-    cors_origins: str = "*"
+    cors_origins: list[str] =  [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://surakshaiq-tsocrrhj.onslate.in",
+]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

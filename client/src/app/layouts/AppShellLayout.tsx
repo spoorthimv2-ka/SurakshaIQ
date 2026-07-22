@@ -76,7 +76,7 @@ const AppShellLayout: React.FC = () => {
               {user?.designation ?? 'Command Dashboard'}
             </h1>
             <p className="text-sm text-gov-slate">
-              {user ? `${user.rank} · ${ROLE_LABELS[user.role]}` : ''} · {jurisdictionLabel}
+              {user ? `${user.rank || 'Officer'} · ${ROLE_LABELS[user.role] || user.role}` : ''} · {jurisdictionLabel}
             </p>
           </div>
           <div className="flex items-center gap-2">

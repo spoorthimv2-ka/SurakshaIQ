@@ -1,91 +1,102 @@
 import { apiClient } from './api';
 
-// Extend the Window interface to recognize the Catalyst SDK
-declare global {
-  interface Window {
-    catalyst: any;
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  officer: Record<string, unknown>;
+}
+
+const TOKEN_KEY = 'access_token';
+const OFFICER_KEY = 'officer';
+
+function getStoredToken(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function getStoredOfficer(): Record<string, unknown> | null {
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem(OFFICER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
   }
 }
 
-/**
- * Ensures the Catalyst Web SDK is loaded and initialized.
- * Returns the auth module if available, or null if the SDK is absent.
- * Safe to call in browser environments only.
- */
-function getCatalystAuth() {
-  if (typeof window === 'undefined') return null;
-  const sdk = window.catalyst;
-  if (!sdk || !sdk.auth) return null;
-  return sdk.auth;
+function setStoredSession(token: string, officer: Record<string, unknown>): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(OFFICER_KEY, JSON.stringify(officer));
 }
 
-function buildRedirectUrl(path: string): string {
-  const base = (import.meta.env.VITE_BASE_PATH as string | undefined)?.replace(/\/$/, '') || '';
-  return `${window.location.origin}${base}${path}`;
+function clearStoredSession(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(OFFICER_KEY);
 }
 
 export const authService = {
   /**
-   * Triggers the Catalyst hosted login UI for a specific DOM element.
-   * @param elementId The ID of the HTML element where the widget will be rendered.
-   * @param path The route path to redirect to after successful Catalyst login.
+   * Authenticates an officer using email and password against the backend JWT endpoint.
    */
-  login(elementId: string, path: string = '/dashboard') {
-    const auth = getCatalystAuth();
-    if (!auth) return;
-    auth.signIn(elementId, {
-      service_url: buildRedirectUrl(path),
-    });
-  },
-
-  /**
-   * Signs the user out from Catalyst and redirects to the login page.
-   * @param path The route path to redirect to after logout.
-   */
-  logout(path: string = '/login') {
-    const auth = getCatalystAuth();
-    if (auth) {
-      apiClient.post('/auth/logout').catch(() => {});
-      auth.signOut(buildRedirectUrl(path));
-    } else {
-      window.location.href = buildRedirectUrl(path);
-    }
-  },
-
-  /**
-   * Uses Catalyst SDK to check if a user session is active.
-   * Returns the basic Catalyst user details if authenticated.
-   */
-  async getCurrentUser(): Promise<any> {
-    const auth = getCatalystAuth();
-    if (!auth) throw new Error('Catalyst SDK is not available.');
-    const response = await auth.isUserAuthenticated();
-    return response.content;
-  },
-
-  /**
-   * Verifies the active Catalyst session with the backend.
-   * Ensures the officer exists in the system and retrieves full profile data (role, permissions).
-   */
-  async verifySession(): Promise<any> {
-    const response = await apiClient.post('/auth/verify-catalyst');
-    // Backend returns { access_token, token_type, officer }
+  async login(email: string, password: string): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/auth/login', { email, password });
+    const { access_token, officer } = response.data;
+    setStoredSession(access_token, officer);
     return response.data;
   },
 
   /**
-   * Lightweight check to see if a Catalyst session exists.
-   * Returns true if authenticated, false otherwise.
-   * Does not call the backend.
+   * Logs out the current officer session.
+   * Clears local storage and calls the backend logout endpoint.
    */
-  async checkSession(): Promise<boolean> {
-    const auth = getCatalystAuth();
-    if (!auth) return false;
+  async logout(): Promise<void> {
     try {
-      const response = await auth.isUserAuthenticated();
-      return !!response.content;
+      await apiClient.post('/auth/logout');
     } catch {
-      return false;
+      // ignore logout endpoint errors - we still clear local state
+    } finally {
+      clearStoredSession();
     }
+  },
+
+  /**
+   * Retrieves the current officer profile from the backend using the stored JWT.
+   * Returns null if no token is present or the request fails.
+   */
+  async getCurrentUser(): Promise<Record<string, unknown> | null> {
+    const token = getStoredToken();
+    if (!token) return null;
+
+    try {
+      const response = await apiClient.get<{ data: Record<string, unknown> }>('/auth/me');
+      const officer = response.data.data;
+      setStoredSession(token, officer);
+      return officer;
+    } catch {
+      clearStoredSession();
+      return null;
+    }
+  },
+
+  /**
+   * Returns the cached officer object from localStorage without making a network request.
+   */
+  getStoredOfficer(): Record<string, unknown> | null {
+    return getStoredOfficer();
+  },
+
+  /**
+   * Returns the stored JWT access token.
+   */
+  getStoredToken(): string | null {
+    return getStoredToken();
   },
 };

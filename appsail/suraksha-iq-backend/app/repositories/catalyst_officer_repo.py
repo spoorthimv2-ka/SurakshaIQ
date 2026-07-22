@@ -2,31 +2,16 @@ from typing import Optional, Dict, Any
 from fastapi import Request
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.catalyst import catalyst_manager
+from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from app.core.logger import logger
 
 
-class CatalystOfficerRepository:
+class CatalystOfficerRepository(BaseCatalystRepository):
     """Authentication repository backed by Zoho Catalyst Data Store."""
 
     def __init__(self, request: Request):
-        self.request = request
-        self.table_name = "Officer"
-        self._table = None
-
-    @property
-    def datastore(self):
-        return catalyst_manager.get_datastore(self.request)
-
-    @property
-    def zcql(self):
-        return catalyst_manager.get_zcql(self.request)
-
-    @property
-    def table(self):
-        if self._table is None:
-            self._table = self.datastore.table(self.table_name)
-        return self._table
+        super().__init__(request, table_name="Officer")
 
     async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer by email using ZCQL."""
@@ -43,7 +28,7 @@ class CatalystOfficerRepository:
     async def find_by_id(self, officer_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer by ROWID."""
         try:
-            row = self.table.get_row(officer_id)
+            row = self.get_table().get_row(officer_id)
             if row:
                 return row
             return None
@@ -56,7 +41,7 @@ class CatalystOfficerRepository:
         try:
             row_data = dict(data)
             row_data["hashed_password"] = hashed_password
-            return self.table.insert_row(row_data)
+            return self.get_table().insert_row(row_data)
         except CatalystError as e:
             logger.error(f"Error creating officer in {self.table_name}: {e}")
             raise RepositoryError(f"Failed to create officer: {e}")
@@ -66,7 +51,7 @@ class CatalystOfficerRepository:
         try:
             row_data = {"hashed_password": hashed_password}
             row_data["ROWID"] = officer_id
-            return self.table.update_row(row_data)
+            return self.get_table().update_row(row_data)
         except CatalystError as e:
             logger.error(f"Error updating password for officer {officer_id}: {e}")
             raise RepositoryError(f"Failed to update officer password: {e}")
