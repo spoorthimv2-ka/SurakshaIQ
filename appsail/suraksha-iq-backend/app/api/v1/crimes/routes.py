@@ -33,7 +33,7 @@ async def get_crimes(
     """Retrieves crimes with optional filters."""
     try:
         repo = CrimeRepository(request)
-        service = CrimeService(repo)
+        service = CrimeService(request, repo)
 
         crimes = await service.find_all_with_filters(
             limit=limit,
@@ -70,7 +70,7 @@ async def get_crime(
     """Retrieves a Crime by ID."""
     try:
         repo = CrimeRepository(request)
-        service = CrimeService(repo)
+        service = CrimeService(request, repo)
 
         crime = await service.get_by_id(crime_id)
         if not crime:
@@ -102,7 +102,7 @@ async def create_crime(
     """Creates a new Crime."""
     try:
         repo = CrimeRepository(request)
-        service = CrimeService(repo)
+        service = CrimeService(request, repo)
 
         result = await service.create(payload.model_dump())
         return CrimeResponse.model_validate(result)
@@ -134,7 +134,7 @@ async def update_crime(
     """Updates an existing Crime."""
     try:
         repo = CrimeRepository(request)
-        service = CrimeService(repo)
+        service = CrimeService(request, repo)
 
         update_data = payload.model_dump(exclude_unset=True)
         if not update_data:
@@ -169,7 +169,7 @@ async def delete_crime(
     """Deletes a Crime."""
     try:
         repo = CrimeRepository(request)
-        service = CrimeService(repo)
+        service = CrimeService(request, repo)
 
         await service.delete(crime_id)
         return None

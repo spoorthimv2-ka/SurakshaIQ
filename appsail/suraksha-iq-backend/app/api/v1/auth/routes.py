@@ -22,8 +22,8 @@ async def login(
     return officer
 
 @router.post("/logout")
-async def logout(request: Request):
-    auth_service = AuthService()
+async def logout(request: Request) -> Dict[str, Any]:
+    auth_service = AuthService(request)
     await auth_service.logout()
     return {"message": "Successfully logged out of backend session."}
 
@@ -31,12 +31,12 @@ async def logout(request: Request):
 async def read_users_me(
     request: Request,
     current_officer: Dict[str, Any] = Depends(get_current_officer)
-):
+) -> Dict[str, Any]:
     return current_officer
 
 @router.get("/sensitive-data")
 async def read_sensitive_data(
     request: Request,
     current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.VIEW_PII]))
-):
+) -> Dict[str, Any]:
     return {"message": "You have access to sensitive PII.", "officer_id": current_officer.get("ROWID")}

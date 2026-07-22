@@ -33,7 +33,7 @@ async def get_firs(
     """Retrieves FIRs with optional filters."""
     try:
         repo = FIRRepository(request)
-        service = FIRService(repo)
+        service = FIRService(request, repo)
 
         firs = await service.find_all_with_filters(
             limit=limit,
@@ -70,7 +70,7 @@ async def get_fir(
     """Retrieves an FIR by ID."""
     try:
         repo = FIRRepository(request)
-        service = FIRService(repo)
+        service = FIRService(request, repo)
 
         fir = await service.get_by_id(fir_id)
         if not fir:
@@ -102,7 +102,7 @@ async def create_fir(
     """Creates a new FIR."""
     try:
         repo = FIRRepository(request)
-        service = FIRService(repo)
+        service = FIRService(request, repo)
 
         result = await service.create(payload.model_dump())
         return FIRResponse.model_validate(result)
@@ -134,7 +134,7 @@ async def update_fir(
     """Updates an existing FIR."""
     try:
         repo = FIRRepository(request)
-        service = FIRService(repo)
+        service = FIRService(request, repo)
 
         update_data = payload.model_dump(exclude_unset=True)
         if not update_data:
@@ -169,7 +169,7 @@ async def delete_fir(
     """Deletes an FIR."""
     try:
         repo = FIRRepository(request)
-        service = FIRService(repo)
+        service = FIRService(request, repo)
 
         await service.delete(fir_id)
         return None

@@ -63,15 +63,6 @@ class AuthService:
             d["MODIFIEDTIME"] = updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
         return d
 
-    async def get_current_officer_from_token(self, token: str) -> Dict[str, Any]:
-        from app.security.jwt import verify_access_token
-        payload = verify_access_token(token)
-        officer_id = payload.get("sub")
-        officer = await self.officer_auth_repo.find_by_id(officer_id)
-        if not officer:
-            raise_unauthorized("Officer not found.")
-        return self._build_officer_dict(officer)
-
     async def login(self, email: str, password: str) -> Dict[str, Any]:
         officer = await self.officer_auth_repo.find_by_email(email)
         if not officer:

@@ -2,7 +2,6 @@ from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
 
 class PoliceStationService:
     """Service layer for PoliceStation entity."""

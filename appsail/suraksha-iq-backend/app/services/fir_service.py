@@ -7,7 +7,7 @@ from app.repositories.police_station_repo import PoliceStationRepository
 from app.repositories.officer_repo import OfficerRepository
 from app.schemas.enums import EntityStatus
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
+from app.core.exceptions import DataValidationError
 
 class FIRService:
     """Service layer for FIR entity."""

@@ -12,7 +12,7 @@ from app.repositories.anomaly_repo import AnomalyRepository
 from app.repositories.network_repo import NetworkRepository
 from app.repositories.repeat_offender_repo import RepeatOffenderRepository
 from app.repositories.predictive_risk_repo import PredictiveRiskRepository
-from app.schemas.report import ReportType, ReportResponse, ReportSummaryResponse, ReportStatistics
+from app.schemas.report import ReportType, ReportResponse, ReportSummaryResponse
 from app.core.logger import logger
 from app.core.exceptions import DataValidationError, RepositoryError
 

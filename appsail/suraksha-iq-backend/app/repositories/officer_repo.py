@@ -15,7 +15,7 @@ class OfficerRepository(BaseCatalystRepository):
     async def find_by_user_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer profile by their associated user ID."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE user_id = '{user_id}' LIMIT 1"
+            query = f"SELECT * FROM {self.table_name} WHERE user_id = {self._zcql_literal(user_id)} LIMIT 1"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 return result[0].get(self.table_name)
@@ -28,7 +28,7 @@ class OfficerRepository(BaseCatalystRepository):
         """Retrieves officers assigned to a specific police station."""
         try:
             offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE station_id = '{station_id}' LIMIT {offset_val}, {limit}"
+            query = f"SELECT * FROM {self.table_name} WHERE station_id = {self._zcql_literal(station_id)} LIMIT {offset_val}, {limit}"
             result = self.zcql.execute_query(query)
             
             rows = []
@@ -44,7 +44,7 @@ class OfficerRepository(BaseCatalystRepository):
         """Retrieves active officers with pagination."""
         try:
             offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE status = 'ACTIVE' ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            query = f"SELECT * FROM {self.table_name} WHERE status = {self._zcql_literal('ACTIVE')} ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
             result = self.zcql.execute_query(query)
             
             rows = []

@@ -35,6 +35,23 @@ class BaseCatalystRepository:
             self._table = self.datastore.table(self.table_name)
         return self._table
 
+    @staticmethod
+    def _zcql_literal(value: Any) -> str:
+        if value is None:
+            return "NULL"
+        if isinstance(value, bool):
+            return "TRUE" if value else "FALSE"
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, str):
+            return "'" + value.replace("'", "''") + "'"
+        return "'" + str(value).replace("'", "''") + "'"
+
+    @staticmethod
+    def _zcql_like(value: str) -> str:
+        escaped = str(value).replace("'", "''")
+        return "'%" + escaped + "%'"
+
     async def create(self, row_data: Dict[str, Any]) -> Dict[str, Any]:
         """Creates a new record in the Catalyst Data Store."""
         if not row_data:
@@ -98,7 +115,7 @@ class BaseCatalystRepository:
         if not column or value is None:
             raise DataValidationError("Both column and value must be provided for exists check")
         try:
-            formatted_value = f"'{value}'" if isinstance(value, str) else value
+            formatted_value = self._zcql_literal(value)
             query = f"SELECT ROWID FROM {self.table_name} WHERE {column} = {formatted_value} LIMIT 1"
             result = self.zcql.execute_query(query)
             return len(result) > 0

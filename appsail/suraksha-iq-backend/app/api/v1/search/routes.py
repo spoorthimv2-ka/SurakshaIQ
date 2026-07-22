@@ -63,6 +63,8 @@ async def search_suggestions(
         service = SearchService(request, SearchRepository(request))
         suggestions = await service.get_suggestions(keyword=keyword, limit=limit)
         return [SearchSuggestion(**s) for s in suggestions]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -85,6 +87,8 @@ async def search_filters(
         service = SearchService(request, SearchRepository(request))
         filters = await service.get_filters()
         return SearchFilters(**filters)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

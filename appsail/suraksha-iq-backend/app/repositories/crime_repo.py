@@ -118,7 +118,7 @@ class CrimeRepository(BaseCatalystRepository):
             if exclude_id:
                 query += f" AND ROWID != '{exclude_id}'"
             query += " LIMIT 1"
-            result = await self.zcql.execute_query(query)
+            result = self.zcql.execute_query(query)
             return len(result) > 0
         except CatalystError as e:
             logger.error(f"Error checking duplicate crime: {e}")

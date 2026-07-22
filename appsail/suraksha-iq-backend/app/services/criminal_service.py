@@ -2,7 +2,6 @@ from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.criminal_repo import CriminalRepository
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
 
 class CriminalService:
     """Service layer for Criminal entity."""

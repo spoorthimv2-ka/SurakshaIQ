@@ -5,8 +5,7 @@ from app.repositories.crime_repo import CrimeRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.schemas.enums import EntityStatus
-from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
+from app.core.exceptions import DataValidationError
 
 class CrimeService:
     """Service layer for Crime entity."""

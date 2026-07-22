@@ -5,9 +5,8 @@ from app.repositories.user_repo import UserRepository
 from app.repositories.officer_repo import OfficerRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
-from app.schemas.admin import AdminUser, AdminUserCreate, AdminUserUpdate, RoleInfo, AdminStatistics, AuditLog
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
+from app.core.exceptions import DataValidationError
 
 class AdminService:
     """Service layer for Admin operations."""

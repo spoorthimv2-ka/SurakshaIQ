@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer, RequirePermission
+from app.api.deps import RequirePermission
 from app.models.enums import Permission
 from app.services.admin_service import AdminService
 from app.repositories.admin_repo import AdminRepository
-from app.schemas.admin import AdminUser, AdminUserCreate, AdminUserUpdate, RoleInfo, AdminStatistics, AuditLog
-from app.core.logger import logger
+from app.schemas.admin import AdminUserCreate, AdminUserUpdate, RoleInfo, AdminStatistics, AuditLog
 
 router = APIRouter()
 
@@ -237,6 +236,8 @@ async def get_roles(
         service = AdminService(request, AdminRepository(request))
         roles = await service.get_roles()
         return [RoleInfo(**r) for r in roles]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -259,6 +260,8 @@ async def get_statistics(
         service = AdminService(request, AdminRepository(request))
         stats = await service.get_statistics()
         return AdminStatistics(**stats)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -284,6 +287,8 @@ async def get_audit_logs(
         service = AdminService(request, AdminRepository(request))
         logs = await service.get_audit_logs(limit=size, offset=offset)
         return [AuditLog(**log) for log in logs]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

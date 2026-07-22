@@ -1,4 +1,4 @@
-from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request, APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
 from app.api.deps import get_current_officer
@@ -12,7 +12,6 @@ from app.schemas.dashboard import (
     CrimeTrendResponse,
     DistrictSummaryResponse,
 )
-from app.core.logger import logger
 
 router = APIRouter()
 

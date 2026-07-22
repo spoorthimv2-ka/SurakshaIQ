@@ -2,7 +2,6 @@ from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.user_repo import UserRepository
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
 
 class UserService:
     """Service layer for User entity."""

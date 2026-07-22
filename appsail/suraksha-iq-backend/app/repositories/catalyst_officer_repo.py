@@ -31,7 +31,7 @@ class CatalystOfficerRepository:
     async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer by email using ZCQL."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE email = '{email}' LIMIT 1"
+            query = f"SELECT * FROM {self.table_name} WHERE email = {self._zcql_literal(email)} LIMIT 1"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 return result[0].get(self.table_name)

@@ -3,7 +3,6 @@ from fastapi import Request
 from app.repositories.officer_repo import OfficerRepository
 from app.repositories.officer_sql_repo import OfficerSQLRepository
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError, RepositoryError
 from app.database.postgres.connection import async_session_maker
 
 def build_officer_dict(officer) -> Dict[str, Any]:
