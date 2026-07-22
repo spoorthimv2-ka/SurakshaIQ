@@ -5,6 +5,7 @@ from app.api.v1.router import api_router
 from app.core.logger import setup_logging
 from app.core.exceptions import DataValidationError, RepositoryError
 from zcatalyst_sdk.exceptions import CatalystError
+import os
 
 setup_logging()
 
@@ -21,7 +22,7 @@ cors_origins = settings.cors_origins
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://surakshaiq-tsocrrhj.onslate.in"],
+    allow_origins=os.getenv("CORS_ORIGINS", "").split(","),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
