@@ -1,9 +1,9 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
-import { apiTimeout } from 'config/env';
+import { apiBaseUrl, apiTimeout } from 'config/env';
 import { handleForbidden, handleUnauthorized } from 'utils/sessionLifecycle';
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: 'https://suraksha-iq-backend-docker-50044197283.development.catalystappsail.in/api/v1/auth/login',
+  baseURL: apiBaseUrl,
   timeout: apiTimeout,
   withCredentials: true,
   headers: {

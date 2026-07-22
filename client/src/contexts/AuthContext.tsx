@@ -37,24 +37,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshSession = useCallback(async () => {
     setLoading(true);
     try {
-      const storedOfficer = authService.getStoredOfficer();
-      if (storedOfficer) {
-        const mapped = mapBackendOfficerToOfficer(storedOfficer);
-        setUser(mapped);
+      const storedToken = authService.getStoredToken();
+      if (!storedToken) {
+        setUser(null);
+        setToken(null);
+        return;
       }
 
       const freshOfficer = await authService.getCurrentUser();
       if (freshOfficer) {
         const mapped = mapBackendOfficerToOfficer(freshOfficer);
         setUser(mapped);
-        setToken(authService.getStoredToken());
+        setToken(storedToken);
       } else {
         setUser(null);
         setToken(null);
+        authService.clearStorage();
       }
     } catch {
       setUser(null);
       setToken(null);
+      authService.clearStorage();
     } finally {
       setLoading(false);
     }

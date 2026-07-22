@@ -43,9 +43,6 @@ function clearStoredSession(): void {
 }
 
 export const authService = {
-  /**
-   * Authenticates an officer using email and password against the backend JWT endpoint.
-   */
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await apiClient.post<LoginResponse>('/auth/login', { email, password });
     const { access_token, officer } = response.data;
@@ -53,28 +50,18 @@ export const authService = {
     return response.data;
   },
 
-  /**
-   * Logs out the current officer session.
-   * Clears local storage and calls the backend logout endpoint.
-   */
   async logout(): Promise<void> {
     try {
       await apiClient.post('/auth/logout');
     } catch {
-      // ignore logout endpoint errors - we still clear local state
     } finally {
       clearStoredSession();
     }
   },
 
-  /**
-   * Retrieves the current officer profile from the backend using the stored JWT.
-   * Returns null if no token is present or the request fails.
-   */
   async getCurrentUser(): Promise<Record<string, unknown> | null> {
     const token = getStoredToken();
     if (!token) return null;
-
     try {
       const response = await apiClient.get<{ data: Record<string, unknown> }>('/auth/me');
       const officer = response.data.data;
@@ -86,17 +73,15 @@ export const authService = {
     }
   },
 
-  /**
-   * Returns the cached officer object from localStorage without making a network request.
-   */
   getStoredOfficer(): Record<string, unknown> | null {
     return getStoredOfficer();
   },
 
-  /**
-   * Returns the stored JWT access token.
-   */
   getStoredToken(): string | null {
     return getStoredToken();
+  },
+
+  clearStorage(): void {
+    clearStoredSession();
   },
 };
