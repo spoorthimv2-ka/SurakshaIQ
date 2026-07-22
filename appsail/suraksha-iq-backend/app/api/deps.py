@@ -1,16 +1,14 @@
 from fastapi import Depends, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any
-
 from app.models.enums import Role, Permission, ROLE_PERMISSIONS_MAP
 from app.security.utils import raise_unauthorized, raise_forbidden
 from app.security.jwt import verify_access_token
 from app.repositories.catalyst_officer_repo import CatalystOfficerRepository
 
 # Swagger/OpenAPI Bearer authentication
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
-)
+
+bearer_scheme = HTTPBearer()
 
 
 def _get_attr(officer: Dict[str, Any], key: str, default=None):
@@ -93,9 +91,9 @@ def _build_officer_dict(officer: Dict[str, Any]) -> Dict[str, Any]:
 
 async def get_current_user(
     request: Request,
-    token: str = Depends(oauth2_scheme),
-) -> Dict[str, Any]:
-
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+):   
+    token = credentials.credentials
     payload = verify_access_token(token)
 
     officer_id = payload.get("sub")
