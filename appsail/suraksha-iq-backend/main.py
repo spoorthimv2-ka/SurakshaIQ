@@ -17,6 +17,14 @@ app = FastAPI(
     debug=settings.environment == "development",
 )
 
+@app.middleware("http")
+async def request_logger(request: Request, call_next):
+    print(f"REQUEST: {request.method} {request.url.path}")
+    response = await call_next(request)
+    print(f"RESPONSE: {response.status_code}")
+    return response
+
+
 cors_origins = settings.cors_origins
 
 app.add_middleware(
