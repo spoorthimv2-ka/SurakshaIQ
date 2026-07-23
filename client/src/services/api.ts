@@ -5,7 +5,7 @@ import { handleForbidden, handleUnauthorized } from 'utils/sessionLifecycle';
 export const apiClient: AxiosInstance = axios.create({
   baseURL: apiBaseUrl,
   timeout: apiTimeout,
-  withCredentials: true,
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
   },

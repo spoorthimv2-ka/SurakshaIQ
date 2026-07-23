@@ -1,5 +1,6 @@
 export const apiBaseUrl =
-  import.meta.env.VITE_API_URL || 'https://suraksha-iq-backend-docker-50044197283.development.catalystappsail.in/api/v1';
+  import.meta.env.VITE_API_URL ??
+  "https://suraksha-iq-backend-docker-50044292645.development.catalystappsail.in/api/v1";
 
 export const apiTimeout = import.meta.env.VITE_API_TIMEOUT
   ? parseInt(import.meta.env.VITE_API_TIMEOUT, 10)
