@@ -16,8 +16,6 @@ export type {
 export { authApi } from './authApi';
 export { hotspotsApi } from './hotspotsApi';
 export type { Hotspot, DistrictHotspot, StationHotspot, HotspotSummary, HotspotFilters } from './hotspotsApi';
-export { trendsApi } from './trendsApi';
-export type { TrendPoint } from './trendsApi';
 export { anomaliesApi } from './anomaliesApi';
 export type { Anomaly, DistrictAnomaly, StationAnomaly, AnomalySummary, AnomalyFactor } from './anomaliesApi';
 export { repeatOffendersApi } from './repeatOffendersApi';
@@ -28,8 +26,6 @@ export { riskScoringApi } from './riskScoringApi';
 export type { RiskFactor, RiskPrediction, DistrictRisk, StationRisk, RiskSummary } from './riskScoringApi';
 export { alertsApi } from './alertsApi';
 export type { AlertRecord, AlertSummary, AlertFilters } from './alertsApi';
-export { casesApi } from './casesApi';
-export type { CaseRecord } from './casesApi';
 export { districtsApi } from './districtsApi';
 export type { DistrictSummary } from './districtsApi';
 export { reportsApi } from './reportsApi';
@@ -37,9 +33,7 @@ export type { ReportRecord, ReportSummary, ReportTypeInfo, ReportFilters, Genera
 export { adminApi } from './adminApi';
 export type { AdminUser, AdminUserCreate, AdminUserUpdate, RoleInfo, AdminStatistics, AuditLog, UserFilters } from './adminApi';
 export { dashboardApi } from './dashboardApi';
-export type { DashboardSummary, DashboardMetric, SummaryResponse, RecentCrimeResponse, RecentFirResponse, CrimeTrendResponse, DistrictSummaryResponse, DashboardFilters } from './dashboardApi';
-export { profileApi } from './profileApi';
-export type { OfficerProfileResponse } from './profileApi';
+export type { DashboardSummary, SummaryResponse, RecentCrimeResponse, RecentFirResponse, CrimeTrendResponse, DistrictSummaryResponse, DashboardFilters } from './dashboardApi';
 export { crimesApi } from './crimesApi';
 export type { Crime, CrimeCreate, CrimeUpdate, CrimeFilters } from './crimesApi';
 export { firsApi } from './firsApi';

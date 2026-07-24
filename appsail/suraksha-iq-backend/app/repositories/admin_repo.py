@@ -136,7 +136,12 @@ class AdminRepository(BaseCatalystRepository):
 
             users = await self.user_repo.find_all(limit=1000)
             officers = await self.officer_repo.find_all(limit=1000)
-            officer_map = {o.get("user_id", ""): o for o in officers}
+            officer_map: Dict[str, Dict[str, Any]] = {}
+            for o in officers:
+                for key in ("user_id", "catalyst_user_id"):
+                    val = o.get(key)
+                    if val:
+                        officer_map[str(val)] = o
 
             by_role: Dict[str, int] = {}
             by_district: Dict[str, int] = {}

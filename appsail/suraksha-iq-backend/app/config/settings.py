@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     "https://surakshaiq-pxmokzwj.onslate.in",
     ]
 
+    # AI / Catalyst AI
+    ai_provider: str = "catalyst"
+    ai_api_key: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    ai_model: str = "gpt-4o-mini"
+    ai_temperature: float = 0.2
+    ai_max_tokens: int = 1200
+    ai_fallback_enabled: bool = True
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

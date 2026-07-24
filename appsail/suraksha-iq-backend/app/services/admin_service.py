@@ -24,7 +24,12 @@ class AdminService:
         logger.info("Fetching users for admin")
         users = await self.repo.find_users(limit=limit, offset=offset, role=role, status=status)
         officers = await self.officer_repo.find_all(limit=1000)
-        officer_map = {o.get("user_id", ""): o for o in officers}
+        officer_map: Dict[str, Dict[str, Any]] = {}
+        for o in officers:
+            for key in ("user_id", "catalyst_user_id"):
+                val = o.get(key)
+                if val:
+                    officer_map[str(val)] = o
 
         stations = await self.station_repo.find_all(limit=1000)
         station_map = {s.get("ROWID", ""): s for s in stations}

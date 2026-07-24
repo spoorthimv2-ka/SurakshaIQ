@@ -50,7 +50,7 @@ ALLOWED_COLUMNS: Dict[str, Tuple[str, ...]] = {
     ),
     "Report": (
         "ROWID", "name", "report_type", "parameters_json",
-        "created_by_officer_id", "created_at",
+        "created_by_officer_id", "created_at", "CREATEDTIME", "MODIFIEDTIME",
     ),
     "CrimeCriminalLink": (
         "ROWID", "crime_id", "criminal_id", "role",

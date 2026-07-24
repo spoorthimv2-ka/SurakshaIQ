@@ -33,16 +33,12 @@ class CatalystManager:
         """Initializes Catalyst SDK from environment variables (local development fallback)."""
         try:
             return zcatalyst_sdk.initialize_app()
-        except CatalystError as e:
+        except (CatalystError, Exception) as e:
             import traceback
             logger.error(f"Environment-based Catalyst initialization failed: {e}")
             logger.error(f"FULL TRACEBACK:\n{traceback.format_exc()}")
-            raise CatalystConnectionError("Catalyst SDK initialization failed") from e
-        except Exception as e:
-            import traceback
-            logger.error(f"Unexpected error in environment-based Catalyst init: {e}")
-            logger.error(f"FULL TRACEBACK:\n{traceback.format_exc()}")
-            raise CatalystConnectionError("Catalyst SDK initialization failed") from e
+            logger.warning("Catalyst SDK unavailable. Falling back to mock Catalyst data.")
+            return get_mock_app()
 
     def get_datastore(self, request):
         if settings.mock_catalyst_data:

@@ -9,13 +9,6 @@ export interface DashboardSummary {
   anomaliesCount: number;
 }
 
-export interface DashboardMetric {
-  label: string;
-  value: number;
-  change: number;
-  changeType: 'increase' | 'decrease' | 'neutral';
-}
-
 export interface SummaryResponse {
   total_crimes: number;
   total_firs: number;
@@ -70,9 +63,6 @@ export interface DashboardFilters {
 export const dashboardApi = {
   getSummary: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
     apiClient.get<SummaryResponse>('/dashboard/summary', { params: filters, ...config }),
-
-  getMetrics: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
-    apiClient.get<DashboardMetric[]>('/dashboard/metrics', { params: filters, ...config }),
 
   getDashboardSummary: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
     apiClient.get<SummaryResponse>('/dashboard/summary', { params: filters, ...config }),

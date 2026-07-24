@@ -5,10 +5,11 @@ import { FileText, MapPin, FileCheck, ShieldAlert, ClipboardList, Users, Map, Ba
 import { KpiCard, Card, AlertBanner, DataTable, LoadingSkeleton, EmptyState } from 'shared/components';
 import { useDashboardSummary, useRecentCrimes, useRecentFirs, useCrimeTrends } from 'features/dashboard/hooks/useDashboard';
 import { useHotspots } from 'features/hotspots/hooks/useHotspots';
+import { useAnomalies } from 'features/anomalies/hooks/useAnomalies';
 import { useFilterStore } from 'shared/state';
 import OperationalStatus from 'shared/components/operational-status/OperationalStatus';
 import IntelligenceScope from 'shared/components/intelligence-scope/IntelligenceScope';
-import AIExecutiveSummary from 'shared/components/ai-executive-summary/AIExecutiveSummary';
+import AIExecutiveSummary, { type ExecutiveBriefing } from 'shared/components/ai-executive-summary/AIExecutiveSummary';
 import LiveIntelligenceFeed from 'shared/components/live-intelligence-feed/LiveIntelligenceFeed';
 import HotspotSnapshot from 'shared/components/hotspot-snapshot/HotspotSnapshot';
 import TrendIntelligence from 'shared/components/trend-intelligence/TrendIntelligence';
@@ -17,7 +18,7 @@ import EmergingAlerts from 'shared/components/emerging-alerts/EmergingAlerts';
 import QuickActions from 'shared/components/quick-actions/QuickActions';
 import AIAssistant from 'shared/components/ai-assistant/AIAssistant';
 import { alertsApi } from 'shared/api/alertsApi';
-import { aiService, type AISummaryResponse } from 'services/aiService';
+import { aiService } from 'services/aiService';
 
 const DETECTION_RATE_MOCK = 68.5;
 
@@ -42,9 +43,12 @@ const Dashboard: React.FC = () => {
   const { data: trends, refetch: refetchTrends } = useCrimeTrends('daily', filters);
   const { data: recentCrimes, isLoading: crimesLoading, refetch: refetchCrimes } = useRecentCrimes(10, filters);
   const { data: recentFirs, isLoading: firsLoading, refetch: refetchFirs } = useRecentFirs(10, filters);
+  const { data: hotspots } = useHotspots({ limit: 20, ...filters });
+  const { data: anomalies } = useAnomalies(20);
 
-  const [aiSummary, setAiSummary] = useState<AISummaryResponse | null>(null);
+  const [aiBriefing, setAiBriefing] = useState<ExecutiveBriefing | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
 
   if (summaryError) {
     return (
@@ -61,8 +65,9 @@ const Dashboard: React.FC = () => {
   const totalProcessed = (summary?.active_firs ?? 0) + (summary?.closed_firs ?? 0);
   const detectionRate = totalProcessed > 0 ? Math.min(((summary?.closed_firs ?? 0) / totalProcessed) * 100, 100) : DETECTION_RATE_MOCK;
 
-  const loadAiInsights = useCallback(async () => {
+  const refreshAi = useCallback(async () => {
     setIsAiLoading(true);
+    setAiError(false);
     try {
       const result = await aiService.generateSummary({
         metrics: {
@@ -70,32 +75,31 @@ const Dashboard: React.FC = () => {
           active_firs: summary?.active_firs ?? 0,
           closed_firs: summary?.closed_firs ?? 0,
           detection_rate: detectionRate,
-          hotspots_count: 5,
+          hotspots_count: hotspots?.length ?? 0,
           trends: (trends ?? []).map((t) => ({ period: t.period, count: t.count })),
         },
-        hotspots: [
-          { location: 'MG Road, Bangalore', riskLevel: 'critical', change: 24 },
-          { location: 'City Market, Mysuru', riskLevel: 'high', change: 12 },
-          { location: 'Belagavi Fort Area', riskLevel: 'medium', change: -5 },
-          { location: 'Mangaluru Port', riskLevel: 'high', change: 18 },
-          { location: 'Hubli-Dharwad Twin City', riskLevel: 'low', change: 2 },
-        ],
-        anomalies: [
-          { title: 'Burglary spike in North Bangalore', severity: 'high' },
-          { title: 'Cybercrime increasing', severity: 'medium' },
-        ],
+        hotspots: (hotspots ?? []).map((h) => ({
+          location: h.district ?? 'Unknown',
+          riskLevel: h.severity?.toLowerCase() ?? 'medium',
+          change: 0,
+        })),
+        anomalies: (anomalies ?? []).map((a) => ({
+          title: (a as any).title ?? (a as any).anomaly_type ?? 'Unknown',
+          severity: (a as any).severity ?? 'medium',
+        })),
       });
-      setAiSummary(result);
+      setAiBriefing(result);
     } catch (error) {
       console.warn('AI summary load failed', error);
+      setAiError(true);
     } finally {
       setIsAiLoading(false);
     }
-  }, [summary, detectionRate, trends]);
+  }, [summary, detectionRate, trends, hotspots, anomalies]);
 
   useEffect(() => {
-    loadAiInsights();
-  }, [loadAiInsights]);
+    refreshAi();
+  }, [refreshAi]);
 
   const refreshAll = useCallback(async () => {
     await Promise.all([
@@ -103,9 +107,9 @@ const Dashboard: React.FC = () => {
       refetchTrends(),
       refetchCrimes(),
       refetchFirs(),
-      loadAiInsights(),
+      refreshAi(),
     ]);
-  }, [refetchSummary, refetchTrends, refetchCrimes, refetchFirs, loadAiInsights]);
+  }, [refetchSummary, refetchTrends, refetchCrimes, refetchFirs, refreshAi]);
 
   const handleApplyFilters = useCallback(async () => {
     await refreshAll();
@@ -170,26 +174,25 @@ const Dashboard: React.FC = () => {
     suggestedAction: a.recommended_action ?? 'Review and take appropriate action',
   })), [alertsData]);
 
-  const mockAiInsights = aiSummary?.insights.length ? aiSummary.insights : [
-    'Theft increased 18% this month.',
-    'Two emerging hotspots identified.',
-    'Most incidents occur between 8 PM and 11 PM.',
-    'Recommend increasing patrols in Mysuru South.',
-  ];
-
-  const mockResourceRecommendations = aiSummary?.recommendations.length ? aiSummary.recommendations.map((r, idx) => ({
-    id: String(idx + 1),
-    title: r.title,
-    description: r.description,
-    priority: r.priority as 'high' | 'medium' | 'low',
-    icon: [Users, MapPin, Eye, Video, Megaphone][idx % 5],
-  })) : [
-    { id: "1", title: "Increase patrol frequency", description: "Deploy additional patrols in high-risk areas during peak hours", priority: "high" as const, icon: Users },
-    { id: "2", title: "Deploy additional mobile unit", description: "Send mobile forensic unit to crime scene for faster evidence collection", priority: "medium" as const, icon: MapPin },
-    { id: "3", title: "Monitor repeat offender", description: "Increase surveillance on known repeat offenders in jurisdiction", priority: "high" as const, icon: Eye },
-    { id: "4", title: "Increase surveillance", description: "Install additional CCTV cameras in identified hotspots", priority: "medium" as const, icon: Video },
-    { id: "5", title: "Conduct cyber awareness campaign", description: "Launch public awareness campaign about online scams and phishing", priority: "low" as const, icon: Megaphone }
-  ];
+  const mockResourceRecommendations = useMemo(() => {
+    const source = aiBriefing?.recommendedActions ?? [];
+    if (!source.length) {
+      return [
+        { id: "1", title: "Increase patrol frequency", description: "Deploy additional patrols in high-risk areas during peak hours", priority: "high" as const, icon: Users },
+        { id: "2", title: "Deploy additional mobile unit", description: "Send mobile forensic unit to crime scene for faster evidence collection", priority: "medium" as const, icon: MapPin },
+        { id: "3", title: "Monitor repeat offender", description: "Increase surveillance on known repeat offenders in jurisdiction", priority: "high" as const, icon: Eye },
+        { id: "4", title: "Increase surveillance", description: "Install additional CCTV cameras in identified hotspots", priority: "medium" as const, icon: Video },
+        { id: "5", title: "Conduct cyber awareness campaign", description: "Launch public awareness campaign about online scams and phishing", priority: "low" as const, icon: Megaphone }
+      ];
+    }
+    return source.map((action, idx) => ({
+      id: String(idx + 1),
+      title: action,
+      description: action,
+      priority: (idx === 0 ? 'high' : 'medium') as 'high' | 'medium' | 'low',
+      icon: [Users, MapPin, Eye, Video, Megaphone][idx % 5],
+    }));
+  }, [aiBriefing]);
 
   const mockQuickActions = [
     { id: "1", label: "Generate Intelligence Report", description: "Create a comprehensive intelligence report", icon: ClipboardList, href: '/reports' },
@@ -232,7 +235,7 @@ const Dashboard: React.FC = () => {
           <Card className="p-6">
             <HotspotSnapshot
               title="Hotspot Snapshot"
-              heatmapPreview="https://via.placeholder.com/600x250?text=Heatmap+Preview"
+              heatmapPreview="/heatmap-placeholder.svg"
               topHotspots={snapshotHotspots}
             />
           </Card>
@@ -251,7 +254,10 @@ const Dashboard: React.FC = () => {
           <Card className="p-6">
             <AIExecutiveSummary
               title="AI Executive Summary"
-              insights={mockAiInsights}
+              briefing={aiBriefing}
+              isLoading={isAiLoading}
+              isError={aiError}
+              onRefresh={refreshAi}
             />
           </Card>
 

@@ -21,3 +21,12 @@ class DistrictResponse(DistrictBase):
     MODIFIEDTIME: str
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class DistrictSummary(BaseModel):
+    id: str
+    name: str
+    caseCount: int = 0
+    riskIndex: float = 0.0
+
+    model_config = ConfigDict(from_attributes=True)

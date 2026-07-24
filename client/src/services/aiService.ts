@@ -15,14 +15,13 @@ export interface AISummaryRequest {
 }
 
 export interface AISummaryResponse {
-  summary: string;
-  insights: string[];
-  recommendations: Array<{
-    title: string;
-    description: string;
-    priority: 'high' | 'medium' | 'low';
-  }>;
+  overallRisk: string;
+  executiveSummary: string;
+  keyFindings: string[];
+  recommendedActions: string[];
+  confidence: number;
   generatedAt: string;
+  isFallback: boolean;
 }
 
 export interface AIReportRequest {
@@ -52,9 +51,9 @@ class AIService {
     }
   }
 
-  async generateRecommendations(payload: Partial<AISummaryRequest>): Promise<AISummaryResponse['recommendations']> {
+  async generateRecommendations(payload: Partial<AISummaryRequest>): Promise<AISummaryResponse['recommendedActions']> {
     try {
-      const { data } = await apiClient.post<AISummaryResponse['recommendations']>(`${this.basePath}/recommendations`, payload);
+      const { data } = await apiClient.post<AISummaryResponse['recommendedActions']>(`${this.basePath}/recommendations`, payload);
       return data;
     } catch (error) {
       console.warn('[AI Service] Recommendations failed, using fallback', error);
@@ -111,20 +110,23 @@ class AIService {
     const recommendations = this.fallbackRecommendations();
 
     return {
-      summary: insights.join(' '),
-      insights,
-      recommendations,
+      overallRisk: metrics.detection_rate < 50 ? 'High' : 'Medium',
+      executiveSummary: insights.join(' '),
+      keyFindings: insights,
+      recommendedActions: recommendations,
+      confidence: 0.75,
       generatedAt: new Date().toISOString(),
+      isFallback: true,
     };
   }
 
-  private fallbackRecommendations(): AISummaryResponse['recommendations'] {
+  private fallbackRecommendations(): string[] {
     return [
-      { title: 'Increase patrol frequency', description: 'Deploy additional patrols in high-risk areas during peak hours', priority: 'high' },
-      { title: 'Deploy additional mobile unit', description: 'Send mobile forensic unit to crime scene for faster evidence collection', priority: 'medium' },
-      { title: 'Monitor repeat offender', description: 'Increase surveillance on known repeat offenders in jurisdiction', priority: 'high' },
-      { title: 'Increase surveillance', description: 'Install additional CCTV cameras in identified hotspots', priority: 'medium' },
-      { title: 'Conduct cyber awareness campaign', description: 'Launch public awareness campaign about online scams and phishing', priority: 'low' },
+      'Increase patrol frequency: Deploy additional patrols in high-risk areas during peak hours',
+      'Deploy additional mobile unit: Send mobile forensic unit to crime scene for faster evidence collection',
+      'Monitor repeat offender: Increase surveillance on known repeat offenders in jurisdiction',
+      'Increase surveillance: Install additional CCTV cameras in identified hotspots',
+      'Conduct cyber awareness campaign: Launch public awareness campaign about online scams and phishing',
     ];
   }
 

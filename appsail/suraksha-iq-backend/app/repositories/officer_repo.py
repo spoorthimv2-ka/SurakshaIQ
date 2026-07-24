@@ -15,7 +15,12 @@ class OfficerRepository(BaseCatalystRepository):
     async def find_by_user_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer profile by their associated user ID."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE user_id = {self._zcql_escape(user_id)} LIMIT 1"
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE user_id = {self._zcql_escape(user_id)} "
+                f"OR catalyst_user_id = {self._zcql_escape(user_id)} "
+                f"LIMIT 1"
+            )
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 return result[0].get(self.table_name)
