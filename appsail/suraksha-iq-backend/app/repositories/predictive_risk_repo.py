@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -9,7 +9,6 @@ class PredictiveRiskRepository(BaseCatalystRepository):
     """
     Repository for predictive risk aggregations backed by Catalyst Data Store.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="Crime")
 
@@ -33,7 +32,7 @@ class PredictiveRiskRepository(BaseCatalystRepository):
             raise RepositoryError(f"Failed to fetch risk data: {e}")
 
     async def _fetch_crimes(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Crime LIMIT {limit}"
+        query = f"SELECT * FROM Crime LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -42,7 +41,7 @@ class PredictiveRiskRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_firs(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM FIR LIMIT {limit}"
+        query = f"SELECT * FROM FIR LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -51,7 +50,7 @@ class PredictiveRiskRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_criminals(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Criminal LIMIT {limit}"
+        query = f"SELECT * FROM Criminal LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -60,7 +59,7 @@ class PredictiveRiskRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_districts(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM District LIMIT {limit}"
+        query = f"SELECT * FROM District LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -69,7 +68,7 @@ class PredictiveRiskRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_stations(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM PoliceStation LIMIT {limit}"
+        query = f"SELECT * FROM PoliceStation LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -80,11 +79,13 @@ class PredictiveRiskRepository(BaseCatalystRepository):
     async def count_crimes_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes in a district within an optional date range."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM Crime WHERE district_id = '{district_id}'"
+            clauses = [f"district_id = {self._zcql_escape(district_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM Crime{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -100,11 +101,13 @@ class PredictiveRiskRepository(BaseCatalystRepository):
     async def count_crimes_by_station(self, station_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes at a police station within an optional date range."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM Crime WHERE station_id = '{station_id}'"
+            clauses = [f"station_id = {self._zcql_escape(station_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM Crime{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -120,11 +123,13 @@ class PredictiveRiskRepository(BaseCatalystRepository):
     async def count_firs_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts FIRs in a district."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM FIR WHERE district_id = '{district_id}'"
+            clauses = [f"district_id = {self._zcql_escape(district_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM FIR{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -140,11 +145,13 @@ class PredictiveRiskRepository(BaseCatalystRepository):
     async def count_firs_by_station(self, station_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts FIRs at a police station."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM FIR WHERE station_id = '{station_id}'"
+            clauses = [f"station_id = {self._zcql_escape(station_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM FIR{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]

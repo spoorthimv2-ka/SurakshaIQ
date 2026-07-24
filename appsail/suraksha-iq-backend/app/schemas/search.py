@@ -29,8 +29,8 @@ class SearchSuggestion(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class SearchFilters(BaseModel):
-    categories: List[str]
-    districts: List[str]
-    stations: List[str]
+    categories: List[Dict[str, Any]]
+    districts: List[Dict[str, Any]]
+    stations: List[Dict[str, Any]]
 
     model_config = ConfigDict(from_attributes=True)

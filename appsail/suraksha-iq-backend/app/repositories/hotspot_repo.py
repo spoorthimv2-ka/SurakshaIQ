@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -9,18 +9,19 @@ class HotspotRepository(BaseCatalystRepository):
     """
     Repository for hotspot aggregations backed by Catalyst Data Store.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="Crime")
 
     async def count_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes in a district within an optional date range."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE district_id = '{district_id}'"
+            clauses = [f"district_id = {self._zcql_escape(district_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -36,11 +37,13 @@ class HotspotRepository(BaseCatalystRepository):
     async def count_by_station(self, station_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes at a police station within an optional date range."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE station_id = '{station_id}'"
+            clauses = [f"station_id = {self._zcql_escape(station_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -56,7 +59,11 @@ class HotspotRepository(BaseCatalystRepository):
     async def find_recent_by_district(self, district_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Retrieves recent crimes for a district."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE district_id = '{district_id}' ORDER BY CREATEDTIME DESC LIMIT {limit}"
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE district_id = {self._zcql_escape(district_id)} "
+                f"ORDER BY CREATEDTIME DESC LIMIT {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             rows = []
             for item in result:
@@ -70,7 +77,11 @@ class HotspotRepository(BaseCatalystRepository):
     async def find_recent_by_station(self, station_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Retrieves recent crimes for a police station."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE station_id = '{station_id}' ORDER BY CREATEDTIME DESC LIMIT {limit}"
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE station_id = {self._zcql_escape(station_id)} "
+                f"ORDER BY CREATEDTIME DESC LIMIT {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             rows = []
             for item in result:
@@ -94,21 +105,25 @@ class HotspotRepository(BaseCatalystRepository):
     ) -> List[Dict[str, Any]]:
         """Retrieves crimes with optional filters."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE 1=1"
+            clauses: List[str] = []
             if district_id:
-                query += f" AND district_id = '{district_id}'"
+                clauses.append(f"district_id = {self._zcql_escape(district_id)}")
             if station_id:
-                query += f" AND station_id = '{station_id}'"
+                clauses.append(f"station_id = {self._zcql_escape(station_id)}")
             if crime_type:
-                query += f" AND crime_type = '{crime_type}'"
+                clauses.append(f"crime_type = {self._zcql_escape(crime_type)}")
             if status:
-                query += f" AND status = '{status}'"
+                clauses.append(f"status = {self._zcql_escape(status)}")
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
-            query += f" ORDER BY CREATEDTIME DESC LIMIT {offset_val}, {limit}"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name}{where} "
+                f"ORDER BY CREATEDTIME DESC LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             rows = []
             for item in result:

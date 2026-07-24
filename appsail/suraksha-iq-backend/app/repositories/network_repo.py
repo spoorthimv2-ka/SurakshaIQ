@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -9,7 +9,6 @@ class NetworkRepository(BaseCatalystRepository):
     """
     Repository for network graph aggregations backed by Catalyst Data Store.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="Crime")
 
@@ -35,7 +34,7 @@ class NetworkRepository(BaseCatalystRepository):
             raise RepositoryError(f"Failed to fetch network data: {e}")
 
     async def _fetch_crimes(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Crime LIMIT {limit}"
+        query = f"SELECT * FROM Crime LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -44,7 +43,7 @@ class NetworkRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_firs(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM FIR LIMIT {limit}"
+        query = f"SELECT * FROM FIR LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -53,7 +52,7 @@ class NetworkRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_criminals(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Criminal LIMIT {limit}"
+        query = f"SELECT * FROM Criminal LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -62,7 +61,7 @@ class NetworkRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_districts(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM District LIMIT {limit}"
+        query = f"SELECT * FROM District LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -71,7 +70,7 @@ class NetworkRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_stations(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM PoliceStation LIMIT {limit}"
+        query = f"SELECT * FROM PoliceStation LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -80,7 +79,7 @@ class NetworkRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_officers(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Officer LIMIT {limit}"
+        query = f"SELECT * FROM Officer LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:

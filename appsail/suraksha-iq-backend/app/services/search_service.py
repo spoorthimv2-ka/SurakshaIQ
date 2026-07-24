@@ -173,6 +173,58 @@ class SearchService:
         """Scores and transforms raw results into SearchResult format."""
         scored: List[Dict[str, Any]] = []
         kw_lower = keyword.lower()
+        search_fields = [
+            "title",
+            "description",
+            "crime_type",
+            "status",
+            "victim_name",
+            "suspect_name",
+            "alias",
+            "vehicle_number",
+            "mobile_number",
+            "weapon",
+            "modus_operandi",
+            "keywords",
+            "ipc_sections",
+            "location",
+            "fir_number",
+            "sections",
+            "summary",
+            "district",
+            "police_station",
+            "entity_name",
+            "entity_type",
+            "anomaly_type",
+            "affected_entity_name",
+        ]
+        searchable_fields = [f for f in search_fields if f]
+        max_score = 100.0 + min(50.0, len(searchable_fields) * 2.0)
+        field_weights = {
+            "fir_number": 120.0,
+            "title": 100.0,
+            "victim_name": 80.0,
+            "suspect_name": 80.0,
+            "alias": 70.0,
+            "vehicle_number": 70.0,
+            "mobile_number": 70.0,
+            "keywords": 90.0,
+            "ipc_sections": 85.0,
+            "sections": 85.0,
+            "crime_type": 80.0,
+            "modus_operandi": 75.0,
+            "weapon": 75.0,
+            "summary": 60.0,
+            "description": 50.0,
+            "location": 50.0,
+            "district": 50.0,
+            "police_station": 50.0,
+            "status": 40.0,
+            "entity_name": 60.0,
+            "entity_type": 50.0,
+            "anomaly_type": 60.0,
+            "affected_entity_name": 50.0,
+        }
 
         for r in results:
             category = r.get("_category", "Unknown")
@@ -181,30 +233,32 @@ class SearchService:
             description = r.get("description", r.get("location", ""))
             created_at = r.get("CREATEDTIME", r.get("created_at", ""))
 
-            title_lower = title.lower()
-            desc_lower = description.lower()
+            matched = False
+            best_field_score = 0.0
+            for field in searchable_fields:
+                value = r.get(field)
+                if not value:
+                    continue
+                val_lower = str(value).lower()
+                if kw_lower == val_lower:
+                    field_score = field_weights.get(field, 30.0)
+                    matched = True
+                    if field_score > best_field_score:
+                        best_field_score = field_score
+                elif kw_lower in val_lower and field_weights.get(field, 30.0) > 50.0:
+                    matched = True
+                    field_score = field_weights.get(field, 30.0) * 0.75
+                    if field_score > best_field_score:
+                        best_field_score = field_score
 
-            score = 0.0
-            if title_lower == kw_lower:
-                score += 100.0
-            elif title_lower.startswith(kw_lower):
-                score += 75.0
-            elif kw_lower in title_lower:
-                score += 50.0
-
-            if desc_lower == kw_lower:
-                score += 50.0
-            elif kw_lower in desc_lower:
-                score += 25.0
-
-            if score > 0:
+            if matched:
                 scored.append({
                     "id": r.get("ROWID", r.get("id", "")),
                     "category": category,
                     "title": title,
                     "subtitle": subtitle,
                     "description": description,
-                    "relevance_score": score,
+                    "relevance_score": max(1.0, min(best_field_score, 100.0)),
                     "created_at": created_at,
                     "metadata": {k: v for k, v in r.items() if k not in {"_category", "title", "description", "CREATEDTIME", "ROWID", "id"}},
                 })

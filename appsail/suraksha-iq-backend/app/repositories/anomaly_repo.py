@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -9,7 +9,6 @@ class AnomalyRepository(BaseCatalystRepository):
     """
     Repository for anomaly aggregations backed by Catalyst Data Store.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="Crime")
 
@@ -33,7 +32,7 @@ class AnomalyRepository(BaseCatalystRepository):
             raise RepositoryError(f"Failed to fetch anomaly data: {e}")
 
     async def _fetch_crimes(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Crime LIMIT {limit}"
+        query = f"SELECT * FROM Crime LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -42,7 +41,7 @@ class AnomalyRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_firs(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM FIR LIMIT {limit}"
+        query = f"SELECT * FROM FIR LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -51,7 +50,7 @@ class AnomalyRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_districts(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM District LIMIT {limit}"
+        query = f"SELECT * FROM District LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -60,7 +59,7 @@ class AnomalyRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_stations(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM PoliceStation LIMIT {limit}"
+        query = f"SELECT * FROM PoliceStation LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -69,7 +68,7 @@ class AnomalyRepository(BaseCatalystRepository):
         return rows
 
     async def _fetch_criminals(self, limit: int) -> List[Dict[str, Any]]:
-        query = f"SELECT * FROM Criminal LIMIT {limit}"
+        query = f"SELECT * FROM Criminal LIMIT {int(limit)}"
         result = self.zcql.execute_query(query)
         rows = []
         for item in result:
@@ -77,14 +76,27 @@ class AnomalyRepository(BaseCatalystRepository):
                 rows.append(item["Criminal"])
         return rows
 
+    async def find_all(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """Retrieves all anomaly records (stub for compatibility)."""
+        try:
+            offset_val = max(int(offset), 0)
+            query = f"SELECT * FROM {self.table_name} LIMIT {offset_val}, {int(limit)}"
+            result = self.zcql.execute_query(query)
+            return [item[self.table_name] for item in result if self.table_name in item]
+        except CatalystError as e:
+            logger.error(f"Error fetching anomalies: {e}")
+            raise RepositoryError(f"Failed to fetch anomalies: {e}")
+
     async def count_crimes_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes in a district."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM Crime WHERE district_id = '{district_id}'"
+            clauses = [f"district_id = {self._zcql_escape(district_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM Crime{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -100,11 +112,13 @@ class AnomalyRepository(BaseCatalystRepository):
     async def count_crimes_by_station(self, station_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes at a police station."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM Crime WHERE station_id = '{station_id}'"
+            clauses = [f"station_id = {self._zcql_escape(station_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM Crime{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -120,11 +134,13 @@ class AnomalyRepository(BaseCatalystRepository):
     async def count_firs_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts FIRs in a district."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM FIR WHERE district_id = '{district_id}'"
+            clauses = [f"district_id = {self._zcql_escape(district_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM FIR{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -140,11 +156,13 @@ class AnomalyRepository(BaseCatalystRepository):
     async def count_firs_by_station(self, station_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts FIRs at a police station."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM FIR WHERE station_id = '{station_id}'"
+            clauses = [f"station_id = {self._zcql_escape(station_id)}"]
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM FIR{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]

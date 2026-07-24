@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from typing import Optional, Dict, Any, List
 
 from app.api.deps import get_current_officer
+from app.repositories.report_repo import ReportRepository
 from app.services.report_service import ReportService
 from app.schemas.report import ReportResponse, ReportSummaryResponse, ReportStatistics, ReportTypeInfo, ReportRequest
 from app.core.logger import logger

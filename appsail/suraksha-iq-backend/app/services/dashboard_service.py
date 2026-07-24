@@ -30,16 +30,57 @@ class DashboardService:
         self.district_repo = DistrictRepository(request)
         self.police_station_repo = PoliceStationRepository(request)
 
-    async def get_summary(self, officer: Dict[str, Any]) -> DashboardSummaryResponse:
+    def _apply_filters(self, items: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        filtered = items
+        if filters.get("jurisdiction"):
+            filtered = [i for i in filtered if i.get("jurisdiction") == filters["jurisdiction"] or i.get("district_id", "").startswith(filters["jurisdiction"].split("-")[0])]
+        if filters.get("police_station"):
+            filtered = [i for i in filtered if i.get("police_station_id") == filters["police_station"] or i.get("station_id") == filters["police_station"]]
+        if filters.get("case_category"):
+            filtered = [i for i in filtered if i.get("crime_type") in filters["case_category"]]
+        if filters.get("severity"):
+            filtered = [i for i in filtered if i.get("severity") == filters["severity"]]
+        if filters.get("crime_status"):
+            filtered = [i for i in filtered if i.get("status") == filters["crime_status"]]
+        if filters.get("start_date") or filters.get("end_date"):
+            start = filters.get("start_date")
+            end = filters.get("end_date")
+            filtered = [i for i in filtered if self._in_date_range(i.get("CREATEDTIME", ""), start, end)]
+        return filtered
+
+    def _in_date_range(self, created_time: str, start: Optional[str], end: Optional[str]) -> bool:
+        if not created_time:
+            return True
+        try:
+            dt = datetime.strptime(created_time[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return True
+        if start:
+            start_dt = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if dt < start_dt:
+                return False
+        if end:
+            end_dt = datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if dt > end_dt:
+                return False
+        return True
+
+    async def get_summary(self, officer: Dict[str, Any], filters: Optional[Dict[str, Any]] = None) -> DashboardSummaryResponse:
         """Returns high-level dashboard summary counts."""
-        total_crimes = await self.crime_repo.count()
-        total_firs = await self.fir_repo.count()
-        active_firs = await self.fir_repo.count_by_status("ACTIVE")
-        closed_firs = await self.fir_repo.count_by_status("INACTIVE") + await self.fir_repo.count_by_status("ARCHIVED")
+        all_crimes = await self.crime_repo.find_all(limit=10000)
+        all_firs = await self.fir_repo.find_all(limit=10000)
+
+        filtered_crimes = self._apply_filters(all_crimes, filters or {})
+        filtered_firs = self._apply_filters(all_firs, filters or {})
+
+        total_crimes = len(filtered_crimes)
+        total_firs = len(filtered_firs)
+        active_firs = sum(1 for f in filtered_firs if f.get("status") == "ACTIVE")
+        closed_firs = sum(1 for f in filtered_firs if f.get("status") in ("INACTIVE", "ARCHIVED"))
 
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        crimes_today = await self.crime_repo.count_by_date_range(today_str, today_str)
-        firs_today = await self.fir_repo.count_by_date_range(today_str, today_str)
+        crimes_today = sum(1 for c in filtered_crimes if c.get("CREATEDTIME", "").startswith(today_str))
+        firs_today = sum(1 for f in filtered_firs if f.get("CREATEDTIME", "").startswith(today_str))
 
         registered_districts = await self.district_repo.count()
         registered_police_stations = await self.police_station_repo.count()
@@ -55,10 +96,11 @@ class DashboardService:
             registered_police_stations=registered_police_stations,
         )
 
-    async def get_recent_crimes(self, officer: Dict[str, Any], limit: int = 10) -> List[RecentCrimeResponse]:
+    async def get_recent_crimes(self, officer: Dict[str, Any], limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> List[RecentCrimeResponse]:
         """Returns the most recent crimes."""
-        crimes = await self.crime_repo.find_all(limit=limit, next_token=None)
-        crimes_sorted = sorted(crimes, key=lambda c: c.get("CREATEDTIME", ""), reverse=True)
+        crimes = await self.crime_repo.find_all(limit=limit * 3, next_token=None)
+        filtered = self._apply_filters(crimes, filters or {})
+        crimes_sorted = sorted(filtered, key=lambda c: c.get("CREATEDTIME", ""), reverse=True)
         return [
             RecentCrimeResponse(
                 ROWID=c.get("ROWID", ""),
@@ -70,10 +112,11 @@ class DashboardService:
             for c in crimes_sorted[:limit]
         ]
 
-    async def get_recent_firs(self, officer: Dict[str, Any], limit: int = 10) -> List[RecentFirResponse]:
+    async def get_recent_firs(self, officer: Dict[str, Any], limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> List[RecentFirResponse]:
         """Returns the most recent FIRs."""
-        firs = await self.fir_repo.find_all(limit=limit, next_token=None)
-        firs_sorted = sorted(firs, key=lambda f: f.get("CREATEDTIME", ""), reverse=True)
+        firs = await self.fir_repo.find_all(limit=limit * 3, next_token=None)
+        filtered = self._apply_filters(firs, filters or {})
+        firs_sorted = sorted(filtered, key=lambda f: f.get("CREATEDTIME", ""), reverse=True)
         return [
             RecentFirResponse(
                 ROWID=f.get("ROWID", ""),
@@ -85,12 +128,13 @@ class DashboardService:
             for f in firs_sorted[:limit]
         ]
 
-    async def get_crime_trends(self, officer: Dict[str, Any], interval: str = "daily") -> List[CrimeTrendResponse]:
+    async def get_crime_trends(self, officer: Dict[str, Any], interval: str = "daily", filters: Optional[Dict[str, Any]] = None) -> List[CrimeTrendResponse]:
         """Returns aggregated crime counts by day, week, or month."""
         all_crimes = await self.crime_repo.find_all(limit=10000)
+        filtered = self._apply_filters(all_crimes, filters or {})
 
         buckets: Dict[str, int] = {}
-        for c in all_crimes:
+        for c in filtered:
             created = c.get("CREATEDTIME", "")
             if not created:
                 continue
@@ -105,6 +149,10 @@ class DashboardService:
                 key = dt.strftime("%Y-W%W")
             elif interval == "monthly":
                 key = dt.strftime("%Y-%m")
+            elif interval == "quarterly":
+                key = f"{dt.year}-Q{(dt.month - 1) // 3 + 1}"
+            elif interval == "yearly":
+                key = dt.strftime("%Y")
             else:
                 key = dt.strftime("%Y-%m-%d")
 
@@ -112,14 +160,17 @@ class DashboardService:
 
         return [CrimeTrendResponse(period=key, count=count) for key, count in sorted(buckets.items())]
 
-    async def get_district_summary(self, officer: Dict[str, Any]) -> List[DistrictSummaryResponse]:
+    async def get_district_summary(self, officer: Dict[str, Any], filters: Optional[Dict[str, Any]] = None) -> List[DistrictSummaryResponse]:
         """Returns per-district crime and FIR aggregates."""
         all_crimes = await self.crime_repo.find_all(limit=10000)
         all_firs = await self.fir_repo.find_all(limit=10000)
 
+        filtered_crimes = self._apply_filters(all_crimes, filters or {})
+        filtered_firs = self._apply_filters(all_firs, filters or {})
+
         district_map: Dict[str, Dict[str, Any]] = {}
 
-        for c in all_crimes:
+        for c in filtered_crimes:
             did = c.get("district_id", "UNKNOWN")
             if did not in district_map:
                 district_map[did] = {
@@ -132,7 +183,7 @@ class DashboardService:
             if c.get("status") == "ACTIVE":
                 district_map[did]["active_investigations"] += 1
 
-        for f in all_firs:
+        for f in filtered_firs:
             did = f.get("district_id", "UNKNOWN")
             if did not in district_map:
                 district_map[did] = {

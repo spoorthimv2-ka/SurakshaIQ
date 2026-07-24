@@ -41,6 +41,27 @@ const CATEGORY_ROUTE: Record<string, string> = {
   Report: '/reports',
 };
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function HighlightText({ text, query }: { text: string; query: string }) {
+  if (!query || !text) return <>{text}</>;
+  const escaped = escapeRegExp(query);
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, idx) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={idx} className="rounded bg-yellow-200 px-0.5 text-gray-900 dark:bg-yellow-600 dark:text-gray-100">{part}</mark>
+        ) : (
+          <span key={idx}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 const Search: React.FC = () => {
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState('');
@@ -51,14 +72,16 @@ const Search: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
 
-  const { data: results, isLoading: resultsLoading, error: resultsError } = useSearch({
+  const searchParams = useMemo(() => ({
     keyword: debouncedKeyword,
     ...(category ? { category } : {}),
     ...(district ? { district } : {}),
     ...(station ? { station } : {}),
     limit: 50,
     offset: 0,
-  });
+  }), [debouncedKeyword, category, district, station]);
+
+  const { data: results, isLoading: resultsLoading, error: resultsError } = useSearch(searchParams);
 
   const { data: suggestions } = useSearchSuggestions(debouncedKeyword);
   const { data: filters } = useSearchFilters();
@@ -92,6 +115,17 @@ const Search: React.FC = () => {
     }
   }, [navigate]);
 
+  const groupedResults = useMemo(() => {
+    if (!results?.results) return new Map<string, SearchResult[]>();
+    const groups = new Map<string, SearchResult[]>();
+    results.results.forEach((r) => {
+      const arr = groups.get(r.category) || [];
+      arr.push(r);
+      groups.set(r.category, arr);
+    });
+    return groups;
+  }, [results]);
+
   const columns: DataTableColumn<SearchResult>[] = [
     {
       key: 'title',
@@ -102,7 +136,7 @@ const Search: React.FC = () => {
           onClick={() => handleSelectResult(r)}
           className="text-left text-blue-600 hover:underline"
         >
-          {r.title}
+          <HighlightText text={r.title} query={debouncedKeyword} />
         </button>
       ),
     },
@@ -114,14 +148,14 @@ const Search: React.FC = () => {
     {
       key: 'subtitle',
       header: 'Subtitle',
-      render: (r) => r.subtitle,
+      render: (r) => <HighlightText text={r.subtitle} query={debouncedKeyword} />,
     },
     {
       key: 'description',
       header: 'Description',
       render: (r) => (
         <span className="line-clamp-1 max-w-xs" title={r.description}>
-          {r.description}
+          <HighlightText text={r.description} query={debouncedKeyword} />
         </span>
       ),
     },
@@ -137,17 +171,68 @@ const Search: React.FC = () => {
     },
   ];
 
-  if (resultsError) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-navy-700 dark:text-white">Global Search</h1>
-          <p className="text-sm text-gov-slate">Search across crimes, FIRs, hotspots, and more</p>
+  const hasResults = results && results.results.length > 0;
+
+  const renderContent = () => {
+    if (resultsError) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-navy-700 dark:text-white">Global Search</h1>
+            <p className="text-sm text-gov-slate">Search across crimes, FIRs, hotspots, and more</p>
+          </div>
+          <AlertBanner variant="error" title="Search failed" message="Unable to perform search. Please try again later." />
         </div>
-        <AlertBanner variant="error" title="Search failed" message="Unable to perform search. Please try again later." />
-      </div>
+      );
+    }
+
+    if (resultsLoading) {
+      return (
+        <Card className="p-6">
+          <LoadingSkeleton variant="table" rows={5} />
+        </Card>
+      );
+    }
+
+    if (hasResults) {
+      return (
+        <div className="space-y-6">
+          {debouncedKeyword && (
+            <Card className="p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Found <span className="font-semibold">{results.total_results}</span> results for{" "}
+                <span className="font-semibold">"{debouncedKeyword}"</span>
+              </p>
+            </Card>
+          )}
+          {Array.from(groupedResults.entries()).map(([cat, items]) => (
+            <Card key={cat} className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-navy-700 dark:text-white">
+                  {CATEGORY_LABEL[cat] ?? cat} ({items.length})
+                </h2>
+                <Badge variant={CATEGORY_VARIANT[cat] ?? 'secondary'}>{items.length} {CATEGORY_LABEL[cat] ?? cat}</Badge>
+              </div>
+              <DataTable
+                columns={columns}
+                data={items}
+                rowKey={(r) => r.id}
+                emptyTitle="No results found"
+                emptyDescription="Try adjusting your search criteria."
+                virtualized={false}
+              />
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <Card className="p-6">
+        <EmptyState title="No results found" description="Try adjusting your search criteria." />
+      </Card>
     );
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -239,29 +324,7 @@ const Search: React.FC = () => {
         </div>
       </Card>
 
-      {resultsLoading ? (
-        <Card className="p-6">
-          <LoadingSkeleton variant="table" rows={5} />
-        </Card>
-      ) : results && results.results.length > 0 ? (
-        <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold text-navy-700 dark:text-white">
-            Search Results ({results.total_results})
-          </h2>
-          <DataTable
-            columns={columns}
-            data={results.results}
-            rowKey={(r) => r.id}
-            emptyTitle="No results found"
-            emptyDescription="Try adjusting your search criteria."
-            virtualized={false}
-          />
-        </Card>
-      ) : (
-        <Card className="p-6">
-          <EmptyState title="No results found" description="Try adjusting your search criteria." />
-        </Card>
-      )}
+      {renderContent()}
 
       {/* Result Details Modal */}
       <Modal
@@ -286,7 +349,7 @@ const Search: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <span className="text-sm font-medium text-gray-700">Title</span>
-                <p className="text-sm text-gray-900">{selectedResult.title}</p>
+                <p className="text-sm text-gray-900"><HighlightText text={selectedResult.title} query={debouncedKeyword} /></p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700">Category</span>
@@ -296,7 +359,7 @@ const Search: React.FC = () => {
               </div>
               <div className="col-span-2">
                 <span className="text-sm font-medium text-gray-700">Description</span>
-                <p className="text-sm text-gray-900">{selectedResult.description}</p>
+                <p className="text-sm text-gray-900"><HighlightText text={selectedResult.description} query={debouncedKeyword} /></p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700">Relevance Score</span>

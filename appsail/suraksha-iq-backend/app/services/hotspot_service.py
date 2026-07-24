@@ -4,6 +4,7 @@ from fastapi import Request
 from app.repositories.hotspot_repo import HotspotRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
+from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.repositories.fir_repo import FIRRepository
 from app.core.logger import logger
 from app.schemas.hotspot import (
@@ -26,6 +27,23 @@ class HotspotService:
         self.station_repo = PoliceStationRepository(request)
         self.fir_repo = FIRRepository(request)
 
+    async def _record_ledger(self, entity_type: str, entity_id: str, score: float, level: str, prediction_type: str = "HOTSPOT") -> None:
+        try:
+            repo = PredictionLedgerRepository(self.request)
+            await repo.record({
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "entity_name": entity_id,
+                "prediction_type": prediction_type,
+                "score": score,
+                "level": level,
+                "factors": [],
+                "model_version": "v1-heuristic",
+                "scored_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as e:
+            logger.warning(f"Ledger write failed: {e}")
+
     async def get_hotspots(
         self,
         officer: Dict[str, Any],
@@ -38,7 +56,7 @@ class HotspotService:
         limit: int = 100,
     ) -> List[HotspotResponse]:
         """Retrieves hotspot records with filters."""
-        del officer
+        
         if not end_date:
             end_date = datetime.now(timezone.utc)
         if not start_date:
@@ -93,7 +111,10 @@ class HotspotService:
                 )
             )
 
-        return sorted(results, key=lambda x: x.hotspot_score, reverse=True)
+        sorted_results = sorted(results, key=lambda x: x.hotspot_score, reverse=True)
+        for r in sorted_results:
+            await self._record_ledger("PoliceStation", r.police_station, r.hotspot_score, r.severity)
+        return sorted_results
 
     async def get_district_hotspots(
         self,
@@ -102,7 +123,7 @@ class HotspotService:
         end_date: Optional[datetime] = None,
     ) -> List[DistrictHotspotResponse]:
         """Retrieves hotspot summary per district."""
-        del officer
+        
         if not end_date:
             end_date = datetime.now(timezone.utc)
         if not start_date:
@@ -134,7 +155,10 @@ class HotspotService:
                 )
             )
 
-        return sorted(results, key=lambda x: x.hotspot_score, reverse=True)
+        sorted_results = sorted(results, key=lambda x: x.hotspot_score, reverse=True)
+        for r in sorted_results:
+            await self._record_ledger("District", r.district_id, r.hotspot_score, "MEDIUM" if r.hotspot_score > 0 else "LOW")
+        return sorted_results
 
     async def get_station_hotspots(
         self,
@@ -143,7 +167,7 @@ class HotspotService:
         end_date: Optional[datetime] = None,
     ) -> List[StationHotspotResponse]:
         """Retrieves hotspot summary per police station."""
-        del officer
+        
         if not end_date:
             end_date = datetime.now(timezone.utc)
         if not start_date:
@@ -176,7 +200,10 @@ class HotspotService:
                 )
             )
 
-        return sorted(results, key=lambda x: x.hotspot_score, reverse=True)
+        sorted_results = sorted(results, key=lambda x: x.hotspot_score, reverse=True)
+        for r in sorted_results:
+            await self._record_ledger("PoliceStation", r.station_id, r.hotspot_score, "MEDIUM" if r.hotspot_score > 0 else "LOW")
+        return sorted_results
 
     async def get_top_hotspots(
         self,
@@ -185,7 +212,6 @@ class HotspotService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[HotspotResponse]:
-        """Returns the top-ranked hotspots."""
         return await self.get_hotspots(
             officer,
             start_date=start_date,
@@ -204,12 +230,14 @@ class HotspotService:
         high = sum(1 for h in hotspots if h.severity == "HIGH")
         medium = sum(1 for h in hotspots if h.severity == "MEDIUM")
         low = sum(1 for h in hotspots if h.severity == "LOW")
-        return HotspotSummaryResponse(
+        summary = HotspotSummaryResponse(
             total_hotspots=len(hotspots),
             high_severity_count=high,
             medium_severity_count=medium,
             low_severity_count=low,
         )
+        await self._record_ledger("Summary", "hotspot-summary", float(summary.total_hotspots), "LOW", prediction_type="HOTSPOT_SUMMARY")
+        return summary
 
     def _compute_hotspot_score(self, crime_count: int, latest_date: Optional[str], statuses: List[str]) -> float:
         """Computes a deterministic hotspot score."""

@@ -56,25 +56,36 @@ export interface DistrictSummaryResponse {
   active_investigations: number;
 }
 
+export interface DashboardFilters {
+  jurisdiction?: string;
+  districtId?: string;
+  policeStation?: string;
+  dateRange?: { start?: string; end?: string };
+  caseCategory?: string[];
+  severity?: string;
+  crimeStatus?: string;
+  timePreset?: 'today' | 'last7' | 'last30' | 'custom';
+}
+
 export const dashboardApi = {
-  getSummary: (params?: Record<string, unknown>, config?: { signal?: AbortSignal }) =>
-    apiClient.get<DashboardSummary>('/dashboard/summary', { params, ...config }),
+  getSummary: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<SummaryResponse>('/dashboard/summary', { params: filters, ...config }),
 
-  getMetrics: (params?: Record<string, unknown>, config?: { signal?: AbortSignal }) =>
-    apiClient.get<DashboardMetric[]>('/dashboard/metrics', { params, ...config }),
+  getMetrics: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<DashboardMetric[]>('/dashboard/metrics', { params: filters, ...config }),
 
-  getDashboardSummary: (config?: { signal?: AbortSignal }) =>
-    apiClient.get<SummaryResponse>('/dashboard/summary', config),
+  getDashboardSummary: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<SummaryResponse>('/dashboard/summary', { params: filters, ...config }),
 
-  getRecentCrimes: (limit?: number, config?: { signal?: AbortSignal }) =>
-    apiClient.get<RecentCrimeResponse[]>('/dashboard/recent-crimes', { params: { limit }, ...config }),
+  getRecentCrimes: (limit = 10, filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<RecentCrimeResponse[]>('/dashboard/recent-crimes', { params: { limit, ...filters }, ...config }),
 
-  getRecentFirs: (limit?: number, config?: { signal?: AbortSignal }) =>
-    apiClient.get<RecentFirResponse[]>('/dashboard/recent-firs', { params: { limit }, ...config }),
+  getRecentFirs: (limit = 10, filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<RecentFirResponse[]>('/dashboard/recent-firs', { params: { limit, ...filters }, ...config }),
 
-  getCrimeTrends: (interval?: string, config?: { signal?: AbortSignal }) =>
-    apiClient.get<CrimeTrendResponse[]>('/dashboard/crime-trends', { params: { interval }, ...config }),
+  getCrimeTrends: (interval = 'daily', filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<CrimeTrendResponse[]>('/dashboard/crime-trends', { params: { interval, ...filters }, ...config }),
 
-  getDistrictSummary: (config?: { signal?: AbortSignal }) =>
-    apiClient.get<DistrictSummaryResponse[]>('/dashboard/district-summary', config),
+  getDistrictSummary: (filters?: DashboardFilters, config?: { signal?: AbortSignal }) =>
+    apiClient.get<DistrictSummaryResponse[]>('/dashboard/district-summary', { params: filters, ...config }),
 };

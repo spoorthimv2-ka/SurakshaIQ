@@ -24,17 +24,19 @@ class AlertService:
         self.district_repo = DistrictRepository(request)
         self.station_repo = PoliceStationRepository(request)
 
-    async def get_alerts(self, status_filter: Optional[str] = None, severity: Optional[str] = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_alerts(self, status_filter: Optional[str] = None, severity: Optional[str] = None, district_id: Optional[str] = None, station_id: Optional[str] = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieves alerts with optional filters."""
         logger.info("Fetching Alerts")
         if status_filter:
-            return await self.repo.find_by_status(status_filter, limit=limit, offset=offset)
-        return await self.repo.find_active(limit=limit, offset=offset)
+            return await self.repo.find_by_status(status_filter, limit=limit, offset=offset, district_id=district_id, station_id=station_id)
+        return await self.repo.find_active(limit=limit, offset=offset, district_id=district_id, station_id=station_id)
 
-    async def get_active_alerts(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_active_alerts(self, limit: int = 100, offset: int = 0, district_id: Optional[str] = None, station_id: Optional[str] = None, severity: Optional[str] = None, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves active alerts."""
         logger.info("Fetching active Alerts")
-        return await self.repo.find_active(limit=limit, offset=offset)
+        if status_filter:
+            return await self.repo.find_by_status(status_filter, limit=limit, offset=offset, district_id=district_id, station_id=station_id)
+        return await self.repo.find_active(limit=limit, offset=offset, district_id=district_id, station_id=station_id, severity=severity)
 
     async def get_summary(self) -> Dict[str, Any]:
         """Retrieves alert summary counts."""

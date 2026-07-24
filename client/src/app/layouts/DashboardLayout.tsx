@@ -1,12 +1,12 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { FilterBar } from 'shared/components';
 
 const DashboardLayout: React.FC = () => {
+  const [analyzed, setAnalyzed] = React.useState(false);
+
   return (
     <div className="space-y-6">
-      <FilterBar />
-      <Outlet />
+         <Outlet context={{ analyzed, setAnalyzed }} />
     </div>
   );
 };

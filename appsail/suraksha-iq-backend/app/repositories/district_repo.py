@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -15,7 +15,7 @@ class DistrictRepository(BaseCatalystRepository):
     async def find_by_code(self, code: str) -> Optional[Dict[str, Any]]:
         """Finds a district by its unique code."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE code = '{code}' LIMIT 1"
+            query = f"SELECT * FROM {self.table_name} WHERE code = {self._zcql_escape(code)} LIMIT 1"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 return result[0].get(self.table_name)
@@ -27,11 +27,16 @@ class DistrictRepository(BaseCatalystRepository):
     async def find_active(self, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves active districts with pagination."""
         try:
-            # Note: Catalyst ZCQL offset starts at 1, but limit/offset syntax might vary.
-            # Typical ZCQL: LIMIT <offset>, <limit> or LIMIT <limit> OFFSET <offset>
-            # Assuming standard ZCQL pagination: LIMIT offset, limit (e.g. LIMIT 1, 10)
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE status = 'ACTIVE' ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE status = {self._zcql_escape('ACTIVE')} "
+                f"ORDER BY {sort_by} {sort_order.upper()} "
+                f"LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             
             rows = []
@@ -43,11 +48,27 @@ class DistrictRepository(BaseCatalystRepository):
             logger.error(f"Error fetching active districts: {e}")
             raise RepositoryError(f"Failed to fetch active districts: {e}")
 
+    async def find_by_id(self, row_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a district by ROWID."""
+        try:
+            query = f"SELECT * FROM {self.table_name} WHERE ROWID = {self._zcql_escape(row_id)} LIMIT 1"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                return result[0].get(self.table_name)
+            return None
+        except CatalystError as e:
+            logger.error(f"Error fetching district {row_id}: {e}")
+            raise RepositoryError(f"Failed to fetch district: {e}")
+
     async def search(self, search_term: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Performs a text search on district name or code."""
         try:
-            # ZCQL LIKE operator
-            query = f"SELECT * FROM {self.table_name} WHERE name LIKE '%{search_term}%' OR code LIKE '%{search_term}%' LIMIT {limit}"
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE name LIKE {self._zcql_like(search_term)} "
+                f"OR code LIKE {self._zcql_like(search_term)} "
+                f"LIMIT {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             
             rows = []
@@ -58,3 +79,19 @@ class DistrictRepository(BaseCatalystRepository):
         except CatalystError as e:
             logger.error(f"Error searching districts with term '{search_term}': {e}")
             raise RepositoryError(f"Failed to search districts: {e}")
+
+    async def count(self) -> int:
+        """Counts all districts."""
+        try:
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                first_row = result[0]
+                for table_data in first_row.values():
+                    for val in table_data.values():
+                        if isinstance(val, (int, float, str)) and str(val).isdigit():
+                            return int(val)
+            return 0
+        except CatalystError as e:
+            logger.error(f"Error counting districts: {e}")
+            raise RepositoryError(f"Failed to count districts: {e}")

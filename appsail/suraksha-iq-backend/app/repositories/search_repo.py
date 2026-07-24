@@ -21,7 +21,6 @@ class SearchRepository(BaseCatalystRepository):
     Repository for global search aggregations backed by Catalyst Data Store.
     Reuses existing repositories for data retrieval.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="Search")
         self.crime_repo = CrimeRepository(request)
@@ -57,6 +56,7 @@ class SearchRepository(BaseCatalystRepository):
         try:
             results = await self.fir_repo.find_all_with_filters(
                 limit=limit,
+                keyword=keyword,
                 district_id=district_id,
                 station_id=station_id,
             )

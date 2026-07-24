@@ -6,8 +6,10 @@ from fastapi import Request
 from app.repositories.repeat_offender_repo import RepeatOffenderRepository
 from app.repositories.crime_repo import CrimeRepository
 from app.repositories.fir_repo import FIRRepository
+from app.repositories.crime_criminal_link_repo import CrimeCriminalLinkRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
+from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.core.logger import logger
 from app.schemas.repeat_offender import (
     RepeatOffenderResponse,
@@ -25,6 +27,7 @@ class RepeatOffenderService:
         self.repo = RepeatOffenderRepository(request)
         self.crime_repo = CrimeRepository(request)
         self.fir_repo = FIRRepository(request)
+        self.link_repo = CrimeCriminalLinkRepository(request)
         self.district_repo = DistrictRepository(request)
         self.station_repo = PoliceStationRepository(request)
 
@@ -39,9 +42,14 @@ class RepeatOffenderService:
         minimum_offences: int = 1,
         limit: int = 100,
         offset: int = 0,
+        include_heuristic: bool = False,
     ) -> List[RepeatOffenderResponse]:
-        """Retrieves repeat offenders with optional filters."""
-        del officer
+        """Retrieves repeat offenders with optional filters.
+        
+        By default uses explicit CrimeCriminalLink table.
+        If include_heuristic=True, falls back to district-proximity matching.
+        """
+        
         if not end_date:
             end_date = datetime.now(timezone.utc)
         if not start_date:
@@ -51,72 +59,117 @@ class RepeatOffenderService:
         date_to = end_date.strftime("%Y-%m-%dT%H:%M:%SZ") if end_date else None
 
         criminals = await self.repo.find_active(limit=1000, offset=0)
-        crimes = await self.crime_repo.find_all_with_filters(
-            district_id=district_id,
-            station_id=station_id,
-            crime_type=crime_type,
-            date_from=date_from,
-            date_to=date_to,
-            limit=1000,
-        )
-        firs = await self.fir_repo.find_all_with_filters(
-            district_id=district_id,
-            station_id=station_id,
-            date_from=date_from,
-            date_to=date_to,
-            limit=1000,
-        )
+        
+        if include_heuristic:
+            crimes = await self.crime_repo.find_all_with_filters(
+                district_id=district_id,
+                station_id=station_id,
+                crime_type=crime_type,
+                date_from=date_from,
+                date_to=date_to,
+                limit=1000,
+            )
+            firs = await self.fir_repo.find_all_with_filters(
+                district_id=district_id,
+                station_id=station_id,
+                date_from=date_from,
+                date_to=date_to,
+                limit=1000,
+            )
+            district_map: Dict[str, Dict[str, Any]] = {}
+            for c in crimes:
+                did = c.get("district_id", "UNKNOWN")
+                sid = c.get("station_id", "UNKNOWN")
+                key = f"{did}:{sid}"
+                if key not in district_map:
+                    district_map[key] = {
+                        "district_id": did,
+                        "station_id": sid,
+                        "crime_count": 0,
+                        "latest_date": None,
+                        "crime_types": set(),
+                        "fir_count": 0,
+                    }
+                entry = district_map[key]
+                entry["crime_count"] += 1
+                entry["crime_types"].add(c.get("crime_type", "UNKNOWN"))
+                created = c.get("CREATEDTIME", "")
+                if created and (entry["latest_date"] is None or created > entry["latest_date"]):
+                    entry["latest_date"] = created
 
-        district_map: Dict[str, Dict[str, Any]] = {}
-        for c in crimes:
-            did = c.get("district_id", "UNKNOWN")
-            sid = c.get("station_id", "UNKNOWN")
-            key = f"{did}:{sid}"
-            if key not in district_map:
-                district_map[key] = {
-                    "district_id": did,
-                    "station_id": sid,
-                    "crime_count": 0,
-                    "latest_date": None,
-                    "crime_types": set(),
-                    "fir_count": 0,
-                }
-            entry = district_map[key]
-            entry["crime_count"] += 1
-            entry["crime_types"].add(c.get("crime_type", "UNKNOWN"))
-            created = c.get("CREATEDTIME", "")
-            if created and (entry["latest_date"] is None or created > entry["latest_date"]):
-                entry["latest_date"] = created
+            fir_map: Dict[str, int] = defaultdict(int)
+            for f in firs:
+                key = f"{f.get('district_id', 'UNKNOWN')}:{f.get('station_id', 'UNKNOWN')}"
+                fir_map[key] += 1
 
-        fir_map: Dict[str, int] = defaultdict(int)
-        for f in firs:
-            key = f"{f.get('district_id', 'UNKNOWN')}:{f.get('station_id', 'UNKNOWN')}"
-            fir_map[key] += 1
+            results: List[RepeatOffenderResponse] = []
+            for criminal in criminals:
+                offender_id = criminal.get("ROWID", "")
+                matched_crimes = []
+                for key, entry in district_map.items():
+                    matched_crimes.append(entry)
 
+                total_offences = sum(e["crime_count"] for e in matched_crimes)
+                if total_offences < minimum_offences:
+                    continue
+
+                districts = list({e["district_id"] for e in matched_crimes})
+                stations = list({e["station_id"] for e in matched_crimes})
+                crime_types = set()
+                for e in matched_crimes:
+                    crime_types.update(e["crime_types"])
+
+                latest_dates = [e["latest_date"] for e in matched_crimes if e["latest_date"]]
+                latest_offence = max(latest_dates) if latest_dates else None
+
+                fir_count = sum(fir_map.get(f"{d}:{s}", 0) for d in districts for s in stations)
+
+                score = self._compute_score(total_offences, fir_count, len(crime_types), latest_offence)
+
+                results.append(
+                    RepeatOffenderResponse(
+                        offender_id=offender_id,
+                        offender_name=criminal.get("name", ""),
+                        total_offences=total_offences,
+                        fir_count=fir_count,
+                        districts_involved=districts,
+                        police_stations_involved=stations,
+                        latest_offence=latest_offence,
+                        repeat_offender_score=round(score, 2),
+                    )
+                )
+
+            results.sort(key=lambda x: x.repeat_offender_score, reverse=True)
+            return results[offset : offset + limit]
+
+        # Explicit linkage path: read from CrimeCriminalLink
         results: List[RepeatOffenderResponse] = []
         for criminal in criminals:
-            # Use criminal ROWID as offender id
             offender_id = criminal.get("ROWID", "")
-            # Match crimes by district/station proximity using criminal's last_known_location
-            # For deterministic scoring without explicit linkage, aggregate by district
-            matched_crimes = []
-            for key, entry in district_map.items():
-                matched_crimes.append(entry)
-
-            total_offences = sum(e["crime_count"] for e in matched_crimes)
+            links = await self.link_repo.find_by_criminal(offender_id, limit=1000)
+            total_offences = len(links)
             if total_offences < minimum_offences:
                 continue
 
-            districts = list({e["district_id"] for e in matched_crimes})
-            stations = list({e["station_id"] for e in matched_crimes})
-            crime_types = set()
-            for e in matched_crimes:
-                crime_types.update(e["crime_types"])
+            crime_ids = [link.get("crime_id") for link in links if link.get("crime_id")]
+            crimes = []
+            if crime_ids:
+                crimes = await self.crime_repo.find_all_with_filters(limit=1000)
+                crimes = [c for c in crimes if c.get("ROWID") in crime_ids]
 
-            latest_dates = [e["latest_date"] for e in matched_crimes if e["latest_date"]]
+            districts = list({c.get("district_id", "UNKNOWN") for c in crimes})
+            stations = list({c.get("station_id", "UNKNOWN") for c in crimes})
+            crime_types = list({c.get("crime_type", "UNKNOWN") for c in crimes})
+
+            latest_dates = [c.get("CREATEDTIME", "") for c in crimes if c.get("CREATEDTIME")]
             latest_offence = max(latest_dates) if latest_dates else None
 
-            fir_count = sum(fir_map.get(f"{d}:{s}", 0) for d in districts for s in stations)
+            fir_count = 0
+            if districts or stations:
+                for d in districts:
+                    fir_count += await self.fir_repo.count_by_district(d, date_from, date_to)
+                for s in stations:
+                    fir_count += await self.fir_repo.count_by_station(s, date_from, date_to)
 
             score = self._compute_score(total_offences, fir_count, len(crime_types), latest_offence)
 
@@ -134,6 +187,8 @@ class RepeatOffenderService:
             )
 
         results.sort(key=lambda x: x.repeat_offender_score, reverse=True)
+        for r in results[offset : offset + limit]:
+            await self._record_ledger(r.offender_id, r.repeat_offender_score, "HIGH" if r.repeat_offender_score >= 50 else "MEDIUM" if r.repeat_offender_score >= 25 else "LOW")
         return results[offset : offset + limit]
 
     async def get_top_repeat_offenders(
@@ -142,13 +197,14 @@ class RepeatOffenderService:
         limit: int = 10,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        include_heuristic: bool = False,
     ) -> List[RepeatOffenderResponse]:
-        """Returns the top-ranked repeat offenders."""
         results = await self.get_repeat_offenders(
             officer,
             start_date=start_date,
             end_date=end_date,
             limit=limit,
+            include_heuristic=include_heuristic,
         )
         return results[:limit]
 
@@ -156,19 +212,24 @@ class RepeatOffenderService:
         self,
         officer: Dict[str, Any],
         offender_id: str,
+        include_heuristic: bool = False,
     ) -> Optional[RepeatOffenderDetailResponse]:
         """Returns detailed information for a specific offender."""
-        del officer
+        
         criminal = await self.repo.find_by_id(offender_id)
         if not criminal:
             return None
 
-        crimes = await self.crime_repo.find_all(limit=1000)
-        firs = await self.fir_repo.find_all(limit=1000)
+        if include_heuristic:
+            crimes = await self.crime_repo.find_all(limit=1000)
+            matched_crimes = crimes
+        else:
+            links = await self.link_repo.find_by_criminal(offender_id, limit=1000)
+            crime_ids = [link.get("crime_id") for link in links if link.get("crime_id")]
+            all_crimes = await self.crime_repo.find_all(limit=1000)
+            matched_crimes = [c for c in all_crimes if c.get("ROWID") in crime_ids]
 
-        matched_crimes = []
-        for c in crimes:
-            matched_crimes.append(c)
+        firs = await self.fir_repo.find_all(limit=1000)
 
         total_offences = len(matched_crimes)
         districts = list({c.get("district_id", "UNKNOWN") for c in matched_crimes})
@@ -201,6 +262,12 @@ class RepeatOffenderService:
             )
         timeline.sort(key=lambda x: x.offence_date, reverse=True)
 
+        await self._record_ledger(
+            entity_id=offender_id,
+            score=score,
+            level="HIGH" if score >= 50 else "MEDIUM" if score >= 25 else "LOW",
+        )
+
         return RepeatOffenderDetailResponse(
             offender_id=offender_id,
             offender_name=criminal.get("name", ""),
@@ -224,14 +291,14 @@ class RepeatOffenderService:
         officer: Dict[str, Any],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        include_heuristic: bool = False,
     ) -> RepeatOffenderStatisticsResponse:
-        """Returns aggregated repeat offender statistics."""
-        del officer
         offenders = await self.get_repeat_offenders(
             officer,
             start_date=start_date,
             end_date=end_date,
             limit=1000,
+            include_heuristic=include_heuristic,
         )
 
         total = len(offenders)
@@ -295,3 +362,20 @@ class RepeatOffenderService:
                 recency_score = 0.0
 
         return frequency_score + fir_score + diversity_score + recency_score
+
+    async def _record_ledger(self, entity_id: str, score: float, level: str, prediction_type: str = "REPEAT_OFFENDER") -> None:
+        try:
+            repo = PredictionLedgerRepository(self.request)
+            await repo.record({
+                "entity_type": "Offender",
+                "entity_id": entity_id,
+                "entity_name": entity_id,
+                "prediction_type": prediction_type,
+                "score": score,
+                "level": level,
+                "factors": [],
+                "model_version": "v1-heuristic",
+                "scored_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as e:
+            logger.warning(f"Ledger write failed: {e}")

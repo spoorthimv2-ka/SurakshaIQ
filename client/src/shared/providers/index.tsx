@@ -32,6 +32,12 @@ function QueryProvider({ children }: { children: React.ReactNode }) {
     const handleError = (error: unknown) => {
       const status = (error as AxiosError).response?.status;
       if (status === 401) {
+        console.groupCollapsed('[REACT QUERY] 401 Unauthorized');
+        console.log('Error:', error);
+        console.log('Response status:', status);
+        console.log('Response data:', (error as AxiosError).response?.data);
+        console.log('VITE_DEV_SKIP_AUTH:', import.meta.env.VITE_DEV_SKIP_AUTH);
+        console.groupEnd();
         handleUnauthorized();
       } else if (status === 403) {
         handleForbidden();

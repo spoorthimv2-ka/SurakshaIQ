@@ -19,6 +19,8 @@ async def get_alerts(
     request: Request,
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by status (e.g. ACTIVE)"),
     severity: Optional[str] = Query(None, description="Filter by severity (e.g. HIGH)"),
+    district_id: Optional[str] = Query(None, description="Filter by district ID"),
+    station_id: Optional[str] = Query(None, description="Filter by police station ID"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: Dict[str, Any] = Depends(get_current_officer),
@@ -26,7 +28,7 @@ async def get_alerts(
     """Retrieves alerts scoped by jurisdiction."""
     try:
         service = AlertService(request, AlertRepository(request))
-        alerts = await service.get_alerts(status_filter=status_filter, severity=severity, limit=limit, offset=offset)
+        alerts = await service.get_alerts(status_filter=status_filter, severity=severity, district_id=district_id, station_id=station_id, limit=limit, offset=offset)
         return [AlertResponse.model_validate(a) for a in alerts]
     except HTTPException:
         raise
@@ -71,12 +73,16 @@ async def get_active_alerts(
     request: Request,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    district_id: Optional[str] = Query(None, description="Filter by district ID"),
+    station_id: Optional[str] = Query(None, description="Filter by police station ID"),
+    status_filter: Optional[str] = Query(None, description="Filter by status"),
+    severity: Optional[str] = Query(None, description="Filter by severity"),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves active alerts from Catalyst Data Store."""
     try:
         service = AlertService(request, AlertRepository(request))
-        alerts = await service.get_active_alerts(limit=limit, offset=offset)
+        alerts = await service.get_active_alerts(limit=limit, offset=offset, district_id=district_id, station_id=station_id, status_filter=status_filter, severity=severity)
         return [AlertResponse.model_validate(a) for a in alerts]
     except HTTPException:
         raise

@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -15,7 +15,7 @@ class FIRRepository(BaseCatalystRepository):
     async def find_by_number(self, fir_number: str) -> Optional[Dict[str, Any]]:
         """Retrieves an FIR by its unique FIR number."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE fir_number = '{fir_number}' LIMIT 1"
+            query = f"SELECT * FROM {self.table_name} WHERE fir_number = {self._zcql_escape(fir_number)} LIMIT 1"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 return result[0].get(self.table_name)
@@ -27,8 +27,16 @@ class FIRRepository(BaseCatalystRepository):
     async def find_by_station(self, station_id: str, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves FIRs scoped to a specific police station."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE station_id = '{station_id}' ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE station_id = {self._zcql_escape(station_id)} "
+                f"ORDER BY {sort_by} {sort_order.upper()} "
+                f"LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             
             rows = []
@@ -43,14 +51,13 @@ class FIRRepository(BaseCatalystRepository):
     async def search(self, search_term: str, station_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """Performs a text search on FIR number or description."""
         try:
-            query = (
-                f"SELECT * FROM {self.table_name} "
-                f"WHERE (fir_number LIKE '%{search_term}%' "
-                f"OR description LIKE '%{search_term}%')"
-            )
+            clauses = [
+                f"(fir_number LIKE {self._zcql_like(search_term)} "
+                f"OR description LIKE {self._zcql_like(search_term)})"
+            ]
             if station_id:
-                query += f" AND station_id = '{station_id}'"
-            query += f" LIMIT {limit}"
+                clauses.append(f"station_id = {self._zcql_escape(station_id)}")
+            query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join(clauses)} LIMIT {int(limit)}"
             
             result = self.zcql.execute_query(query)
             
@@ -68,6 +75,7 @@ class FIRRepository(BaseCatalystRepository):
         limit: int = 100,
         offset: int = 0,
         fir_number: Optional[str] = None,
+        keyword: Optional[str] = None,
         district_id: Optional[str] = None,
         station_id: Optional[str] = None,
         officer_id: Optional[str] = None,
@@ -79,25 +87,44 @@ class FIRRepository(BaseCatalystRepository):
     ) -> List[Dict[str, Any]]:
         """Retrieves FIRs with optional filters."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE 1=1"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            clauses: List[str] = []
             
             if fir_number:
-                query += f" AND fir_number LIKE '%{fir_number}%'"
+                clauses.append(f"fir_number LIKE {self._zcql_like(fir_number)}")
+            if keyword:
+                clauses.append(
+                    f"(fir_number LIKE {self._zcql_like(keyword)} "
+                    f"OR description LIKE {self._zcql_like(keyword)} "
+                    f"OR sections LIKE {self._zcql_like(keyword)} "
+                    f"OR summary LIKE {self._zcql_like(keyword)} "
+                    f"OR victim_name LIKE {self._zcql_like(keyword)} "
+                    f"OR suspect_name LIKE {self._zcql_like(keyword)} "
+                    f"OR vehicle_number LIKE {self._zcql_like(keyword)} "
+                    f"OR mobile_number LIKE {self._zcql_like(keyword)} "
+                    f"OR ipc_sections LIKE {self._zcql_like(keyword)})"
+                )
             if district_id:
-                query += f" AND district_id = '{district_id}'"
+                clauses.append(f"district_id = {self._zcql_escape(district_id)}")
             if station_id:
-                query += f" AND station_id = '{station_id}'"
+                clauses.append(f"station_id = {self._zcql_escape(station_id)}")
             if officer_id:
-                query += f" AND officer_id = '{officer_id}'"
+                clauses.append(f"officer_id = {self._zcql_escape(officer_id)}")
             if status:
-                query += f" AND status = '{status}'"
+                clauses.append(f"status = {self._zcql_escape(status)}")
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
             
-            query += f" ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} {where} "
+                f"ORDER BY {sort_by} {sort_order.upper()} LIMIT {offset_val}, {int(limit)}"
+            )
             
             result = self.zcql.execute_query(query)
             
@@ -113,7 +140,7 @@ class FIRRepository(BaseCatalystRepository):
     async def count_by_status(self, status: str) -> int:
         """Counts FIRs by status."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE status = '{status}'"
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE status = {self._zcql_escape(status)}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -129,11 +156,13 @@ class FIRRepository(BaseCatalystRepository):
     async def count_by_date_range(self, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts FIRs within an optional date range."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE 1=1"
+            clauses: List[str] = []
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]

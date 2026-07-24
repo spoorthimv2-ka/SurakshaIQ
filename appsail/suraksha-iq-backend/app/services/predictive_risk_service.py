@@ -9,6 +9,7 @@ from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.repositories.hotspot_repo import HotspotRepository
 from app.repositories.repeat_offender_repo import RepeatOffenderRepository
+from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.core.logger import logger
 from app.schemas.risk import (
     RiskPrediction,
@@ -32,11 +33,27 @@ class PredictiveRiskService:
         self.hotspot_repo = HotspotRepository(request)
         self.repeat_offender_repo = RepeatOffenderRepository(request)
 
+    async def _record_ledger(self, entity_type: str, entity_id: str, score: float, level: str, factors: Optional[List[Dict[str, Any]]] = None, prediction_type: Optional[str] = None) -> None:
+        try:
+            repo = PredictionLedgerRepository(self.request)
+            await repo.record({
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "entity_name": entity_id,
+                "prediction_type": prediction_type or "RISK",
+                "score": score,
+                "level": level,
+                "factors": factors or [],
+                "model_version": "v1-heuristic",
+                "scored_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as e:
+            logger.warning(f"Ledger write failed: {e}")
+
     async def get_predictions(self, officer: Dict[str, Any], limit: int = 100) -> List[RiskPrediction]:
         """Retrieves risk predictions for all districts and stations."""
-        del officer
-        data = await self.repo.get_risk_data(limit=limit)
         predictions: List[RiskPrediction] = []
+        data = await self.repo.get_risk_data(limit=limit)
 
         for district in data.get("districts", []):
             did = district.get("ROWID", district.get("id", ""))
@@ -71,11 +88,12 @@ class PredictiveRiskService:
             )
 
         predictions.sort(key=lambda x: x.risk_score, reverse=True)
+        for p in predictions:
+            await self._record_ledger(p.entity_type, p.entity_id, p.risk_score, p.risk_level, [f.model_dump(mode="json") for f in p.contributing_factors])
         return predictions
 
     async def get_summary(self, officer: Dict[str, Any]) -> RiskSummary:
         """Retrieves aggregated risk summary."""
-        del officer
         predictions = await self.get_predictions(officer, limit=1000)
         if not predictions:
             return RiskSummary(
@@ -111,7 +129,7 @@ class PredictiveRiskService:
                 }
             )
 
-        return RiskSummary(
+        summary = RiskSummary(
             total_entities=total,
             average_risk=round(average_risk, 2),
             highest_risk_district=highest_risk_district,
@@ -120,10 +138,12 @@ class PredictiveRiskService:
             total_critical_risk=len(critical_risk),
             risk_distribution=distribution,
         )
+        await self._record_ledger("Summary", "risk-summary", round(average_risk, 2), "LOW", prediction_type="RISK_SUMMARY")
+        return summary
 
     async def get_district_predictions(self, officer: Dict[str, Any]) -> List[DistrictRisk]:
         """Retrieves risk predictions for all districts."""
-        del officer
+        
         predictions = await self.get_predictions(officer, limit=1000)
         district_risks: List[DistrictRisk] = []
         for p in predictions:
@@ -146,7 +166,7 @@ class PredictiveRiskService:
 
     async def get_station_predictions(self, officer: Dict[str, Any]) -> List[StationRisk]:
         """Retrieves risk predictions for all police stations."""
-        del officer
+        
         predictions = await self.get_predictions(officer, limit=1000)
         station_risks: List[StationRisk] = []
         for p in predictions:
@@ -175,7 +195,7 @@ class PredictiveRiskService:
 
     async def get_entity_prediction(self, officer: Dict[str, Any], entity_id: str, entity_type: str = "District") -> Optional[RiskPrediction]:
         """Retrieves risk prediction for a specific entity."""
-        del officer
+        
         predictions = await self.get_predictions(officer, limit=1000)
         for p in predictions:
             if p.entity_id == entity_id and p.entity_type == entity_type:

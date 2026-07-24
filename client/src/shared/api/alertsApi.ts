@@ -27,6 +27,8 @@ export interface AlertSummary {
 export interface AlertFilters {
   status?: string;
   severity?: string;
+  district_id?: string;
+  station_id?: string;
   limit?: number;
   offset?: number;
 }
@@ -38,8 +40,8 @@ export const alertsApi = {
   getSummary: () =>
     apiClient.get<AlertSummary>('/alerts/summary'),
 
-  getActive: (limit = 100, offset = 0) =>
-    apiClient.get<AlertRecord[]>('/alerts/active', { params: { limit, offset } }),
+  getActive: (limit = 100, offset = 0, filters?: { district_id?: string; station_id?: string; severity?: string; status?: string }) =>
+    apiClient.get<AlertRecord[]>('/alerts/active', { params: { limit, offset, ...filters } }),
 
   getById: (id: string) =>
     apiClient.get<AlertRecord>(`/alerts/${id}`),

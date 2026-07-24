@@ -1,4 +1,4 @@
-from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
+from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status as http_status
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
 
@@ -49,7 +49,7 @@ async def get_hotspots(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch hotspots: {str(e)}"
         )
 
@@ -75,7 +75,7 @@ async def get_district_hotspots(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch district hotspots: {str(e)}"
         )
 
@@ -101,7 +101,7 @@ async def get_station_hotspots(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch station hotspots: {str(e)}"
         )
 
@@ -128,7 +128,7 @@ async def get_top_hotspots(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch top hotspots: {str(e)}"
         )
 

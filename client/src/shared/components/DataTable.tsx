@@ -84,12 +84,12 @@ function DataTable<T>({
     setVisibleCount(pageSize);
   }, [data, pageSize]);
 
-  if (isLoading) {
-    return <LoadingSkeleton variant="table" rows={5} />;
+  if (!Array.isArray(data) || data.length === 0) {
+    return <EmptyState title={emptyTitle} description={emptyDescription} />;
   }
 
-  if (data.length === 0) {
-    return <EmptyState title={emptyTitle} description={emptyDescription} />;
+  if (isLoading) {
+    return <LoadingSkeleton variant="table" rows={5} />;
   }
 
   return (

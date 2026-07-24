@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from collections import defaultdict
+from datetime import datetime, timezone
 from fastapi import Request
 
 from app.repositories.network_repo import NetworkRepository
@@ -9,6 +10,7 @@ from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.repositories.officer_repo import OfficerRepository
 from app.repositories.criminal_repo import CriminalRepository
+from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.core.logger import logger
 from app.schemas.network import (
     NetworkNode,
@@ -32,15 +34,32 @@ class NetworkService:
         self.officer_repo = OfficerRepository(request)
         self.criminal_repo = CriminalRepository(request)
 
+    async def _record_ledger(self, entity_type: str, entity_id: str, score: float, level: str) -> None:
+        try:
+            repo = PredictionLedgerRepository(self.request)
+            await repo.record({
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "entity_name": entity_id,
+                "prediction_type": "NETWORK",
+                "score": score,
+                "level": level,
+                "factors": [],
+                "model_version": "v1-heuristic",
+                "scored_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as e:
+            logger.warning(f"Ledger write failed: {e}")
+
     async def get_network(self, officer: Dict[str, Any], limit: int = 500) -> NetworkGraphResponse:
         """Builds the full relationship graph from Catalyst Data Store."""
-        del officer
+        
         data = await self.repo.get_network_data(limit=limit)
         return self._build_graph(data)
 
     async def get_statistics(self, officer: Dict[str, Any]) -> NetworkStatistics:
         """Returns network statistics."""
-        del officer
+        
         data = await self.repo.get_network_data(limit=1000)
         graph = self._build_graph(data)
         node_types = defaultdict(int)
@@ -53,7 +72,7 @@ class NetworkService:
             degree[edge.target] += 1
 
         avg_connections = sum(degree.values()) / max(len(graph.nodes), 1)
-        return NetworkStatistics(
+        stats = NetworkStatistics(
             total_nodes=len(graph.nodes),
             total_edges=len(graph.edges),
             connected_offenders=node_types.get("Offender", 0),
@@ -61,10 +80,12 @@ class NetworkService:
             connected_districts=node_types.get("District", 0),
             average_connections=round(avg_connections, 2),
         )
+        await self._record_ledger("NetworkGraph", "full", round(avg_connections, 2), "LOW")
+        return stats
 
     async def get_offender_network(self, officer: Dict[str, Any], offender_id: str) -> NetworkGraphResponse:
         """Returns graph data for a specific offender."""
-        del officer
+        
         data = await self.repo.get_network_data(limit=1000)
         graph = self._build_graph(data)
         connected_ids = {offender_id}
@@ -85,7 +106,7 @@ class NetworkService:
 
     async def get_station_network(self, officer: Dict[str, Any], station_id: str) -> NetworkGraphResponse:
         """Returns graph data for a specific police station."""
-        del officer
+        
         data = await self.repo.get_network_data(limit=1000)
         graph = self._build_graph(data)
         connected_ids = {station_id}
@@ -106,7 +127,7 @@ class NetworkService:
 
     async def get_district_network(self, officer: Dict[str, Any], district_id: str) -> NetworkGraphResponse:
         """Returns graph data for a specific district."""
-        del officer
+        
         data = await self.repo.get_network_data(limit=1000)
         graph = self._build_graph(data)
         connected_ids = {district_id}
@@ -127,7 +148,7 @@ class NetworkService:
 
     async def search(self, officer: Dict[str, Any], query: str, limit: int = 50) -> NetworkSearchResponse:
         """Searches the network graph."""
-        del officer
+        
         if not query:
             raise ValueError("Query parameter is required")
 
@@ -205,7 +226,7 @@ class NetworkService:
         for officer in data.get("officers", []):
             oid = officer.get("ROWID", officer.get("id", ""))
             add_node(oid, officer.get("name", "Unknown Officer"), "Officer", officer)
-            station_id = officer.get("station_id", "")
+            station_id = officer.get("police_station_id", "")
             if station_id:
                 edges.append(NetworkEdge(source=oid, target=station_id, type="belongs_to", properties={}))
 

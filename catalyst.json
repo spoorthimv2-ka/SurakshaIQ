@@ -11,8 +11,12 @@
   },
   "appsail": [
     {
-      "source": "appsail/suraksha-iq-backend",
+      "source": "appsail\\suraksha-iq-backend",
       "name": "suraksha-iq-backend"
+    },
+    {
+      "source": "docker://prasad15hari/suraksha-iq-backend:v20",
+      "name": "suraksha-iq-backend-docker"
     }
   ]
 }

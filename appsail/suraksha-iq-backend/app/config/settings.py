@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     catalyst_redirect_uri: Optional[str] = None
 
     # Security
+    dev_skip_auth: bool = False
+    mock_catalyst_data: bool = False
     cors_origins: list[str] =  [
     "http://localhost:3000",
     "http://localhost:5173",

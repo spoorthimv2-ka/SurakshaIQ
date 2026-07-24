@@ -9,6 +9,7 @@ from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.repositories.hotspot_repo import HotspotRepository
 from app.repositories.repeat_offender_repo import RepeatOffenderRepository
+from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.core.logger import logger
 from app.schemas.anomaly import (
     Anomaly,
@@ -32,9 +33,26 @@ class AnomalyService:
         self.hotspot_repo = HotspotRepository(request)
         self.repeat_offender_repo = RepeatOffenderRepository(request)
 
+    async def _record_ledger(self, entity_type: str, entity_id: str, score: float, level: str, factors: Optional[List[Dict[str, Any]]] = None, prediction_type: Optional[str] = None) -> None:
+        try:
+            repo = PredictionLedgerRepository(self.request)
+            await repo.record({
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "entity_name": entity_id,
+                "prediction_type": prediction_type or "ANOMALY",
+                "score": score,
+                "level": level,
+                "factors": factors or [],
+                "model_version": "v1-heuristic",
+                "scored_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as e:
+            logger.warning(f"Ledger write failed: {e}")
+
     async def get_anomalies(self, officer: Dict[str, Any], limit: int = 100) -> List[Anomaly]:
         """Retrieves detected anomalies for all districts and stations."""
-        del officer
+        
         data = await self.repo.get_anomaly_data(limit=limit)
         anomalies: List[Anomaly] = []
 
@@ -52,11 +70,14 @@ class AnomalyService:
             anomalies.extend(entity_anomalies)
 
         anomalies.sort(key=lambda x: x.anomaly_score, reverse=True)
-        return anomalies[:limit]
+        result = anomalies[:limit]
+        for a in result:
+            await self._record_ledger(a.affected_entity_type, a.affected_entity_id, a.anomaly_score, a.severity, [f.model_dump(mode="json") for f in a.contributing_factors])
+        return result
 
     async def get_summary(self, officer: Dict[str, Any]) -> AnomalySummary:
         """Retrieves aggregated anomaly summary."""
-        del officer
+        
         anomalies = await self.get_anomalies(officer, limit=1000)
         high = [a for a in anomalies if a.severity == "HIGH"]
         critical = [a for a in anomalies if a.severity == "CRITICAL"]
@@ -77,7 +98,7 @@ class AnomalyService:
             for a in anomalies
         ]
 
-        return AnomalySummary(
+        summary = AnomalySummary(
             total_anomalies=len(anomalies),
             high_anomalies=len(high),
             critical_anomalies=len(critical),
@@ -86,10 +107,12 @@ class AnomalyService:
             average_anomaly_score=round(avg_score, 2),
             anomaly_distribution=distribution,
         )
+        await self._record_ledger("Summary", "anomaly-summary", round(avg_score, 2), "LOW", prediction_type="ANOMALY_SUMMARY")
+        return summary
 
     async def get_district_anomalies(self, officer: Dict[str, Any]) -> List[DistrictAnomaly]:
         """Retrieves anomalies for all districts."""
-        del officer
+        
         anomalies = await self.get_anomalies(officer, limit=1000)
         district_anomalies: List[DistrictAnomaly] = []
         for a in anomalies:
@@ -111,7 +134,7 @@ class AnomalyService:
 
     async def get_station_anomalies(self, officer: Dict[str, Any]) -> List[StationAnomaly]:
         """Retrieves anomalies for all police stations."""
-        del officer
+        
         anomalies = await self.get_anomalies(officer, limit=1000)
         station_anomalies: List[StationAnomaly] = []
         for a in anomalies:
@@ -135,7 +158,7 @@ class AnomalyService:
 
     async def get_anomaly(self, officer: Dict[str, Any], anomaly_id: str) -> Optional[Anomaly]:
         """Retrieves a specific anomaly by ID."""
-        del officer
+        
         anomalies = await self.get_anomalies(officer, limit=1000)
         for a in anomalies:
             if a.anomaly_id == anomaly_id:

@@ -46,6 +46,22 @@ class DashboardSummaryResponse(BaseModel):
     registered_districts: int
     registered_police_stations: int
 
+    @property
+    def totalCases(self) -> int:
+        return self.total_crimes
+
+    @property
+    def openCases(self) -> int:
+        return self.active_firs
+
+    @property
+    def resolvedCases(self) -> int:
+        return self.closed_firs
+
+    activeAlerts: int = 0
+    hotspotsCount: int = 0
+    anomaliesCount: int = 0
+
     model_config = ConfigDict(from_attributes=True)
 
 class RecentCrimeResponse(BaseModel):

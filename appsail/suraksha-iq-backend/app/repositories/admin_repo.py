@@ -5,7 +5,7 @@ from app.repositories.user_repo import UserRepository
 from app.repositories.officer_repo import OfficerRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -14,7 +14,6 @@ class AdminRepository(BaseCatalystRepository):
     Repository for admin operations backed by Catalyst Data Store.
     Reuses existing repositories for data retrieval.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="User")
         self.user_repo = UserRepository(request)
@@ -25,13 +24,19 @@ class AdminRepository(BaseCatalystRepository):
     async def find_users(self, limit: int = 100, offset: int = 0, role: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves users with optional filters, merged with officer data."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE 1=1"
+            self._validate_column(self.table_name, "role")
+            self._validate_column(self.table_name, "status")
+            offset_val = max(int(offset), 0)
+            clauses: List[str] = []
             if role:
-                query += f" AND role = '{role}'"
+                clauses.append(f"role = {self._zcql_escape(role)}")
             if status:
-                query += f" AND status = '{status}'"
-            query += f" ORDER BY CREATEDTIME DESC LIMIT {offset_val}, {limit}"
+                clauses.append(f"status = {self._zcql_escape(status)}")
+            where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            query = (
+                f"SELECT * FROM {self.table_name} {where} "
+                f"ORDER BY CREATEDTIME DESC LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             
             rows = []
@@ -118,7 +123,7 @@ class AdminRepository(BaseCatalystRepository):
         try:
             total = await self.user_repo.count()
             active = await self.user_repo.find_active(limit=1000)
-            inactive_query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE status = 'INACTIVE'"
+            inactive_query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE status = {self._zcql_escape('INACTIVE')}"
             inactive_result = self.zcql.execute_query(inactive_query)
             inactive = 0
             if inactive_result and len(inactive_result) > 0:
@@ -170,8 +175,8 @@ class AdminRepository(BaseCatalystRepository):
     async def get_audit_logs(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieves audit logs."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM AuditLog ORDER BY CREATEDTIME DESC LIMIT {offset_val}, {limit}"
+            offset_val = max(int(offset), 0)
+            query = f"SELECT * FROM AuditLog ORDER BY CREATEDTIME DESC LIMIT {offset_val}, {int(limit)}"
             result = self.zcql.execute_query(query)
             
             rows = []

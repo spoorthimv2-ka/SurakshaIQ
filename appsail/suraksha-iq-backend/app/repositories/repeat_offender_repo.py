@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
-from app.core.exceptions import RepositoryError
+from app.core.exceptions import RepositoryError, DataValidationError
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -9,15 +9,25 @@ class RepeatOffenderRepository(BaseCatalystRepository):
     """
     Repository for repeat offender aggregations backed by Catalyst Data Store.
     """
-
     def __init__(self, request: Request):
         super().__init__(request, table_name="Criminal")
 
-    async def find_active(self, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
-        """Retrieves active criminals with pagination."""
+    async def find_active(self, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC", district_id: Optional[str] = None, station_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Retrieves active criminals with optional scoping filters."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE status = 'ACTIVE' ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            clauses = [f"status = {self._zcql_escape('ACTIVE')}"]
+            if district_id:
+                clauses.append(f"last_known_location = {self._zcql_escape(district_id)}")
+            where = f"WHERE {' AND '.join(clauses)} "
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} {where}"
+                f"ORDER BY {sort_by} {sort_order.upper()} "
+                f"LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             
             rows = []
@@ -32,7 +42,7 @@ class RepeatOffenderRepository(BaseCatalystRepository):
     async def find_by_id(self, row_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a criminal by ROWID."""
         try:
-            query = f"SELECT * FROM {self.table_name} WHERE ROWID = '{row_id}' LIMIT 1"
+            query = f"SELECT * FROM {self.table_name} WHERE ROWID = {self._zcql_escape(row_id)} LIMIT 1"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 return result[0].get(self.table_name)
@@ -46,9 +56,9 @@ class RepeatOffenderRepository(BaseCatalystRepository):
         try:
             query = (
                 f"SELECT * FROM {self.table_name} "
-                f"WHERE name LIKE '%{search_term}%' "
-                f"OR alias LIKE '%{search_term}%' "
-                f"LIMIT {limit}"
+                f"WHERE name LIKE {self._zcql_like(search_term)} "
+                f"OR alias LIKE {self._zcql_like(search_term)} "
+                f"LIMIT {int(limit)}"
             )
             result = self.zcql.execute_query(query)
             

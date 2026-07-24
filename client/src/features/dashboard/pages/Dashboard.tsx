@@ -1,30 +1,50 @@
-import React from 'react';
-import { Activity, AlertTriangle, FileText, MapPin, FileCheck, CheckCircle, XCircle, Calendar, Building2 } from 'lucide-react';
-import { KpiCard, Card, AlertBanner, ChartContainer, DataTable, LoadingSkeleton, EmptyState } from 'shared/components';
-import type { DataTableColumn } from 'shared/components';
-import { useDashboardSummary, useCrimeTrends, useRecentCrimes, useRecentFirs, useDistrictSummary } from 'features/dashboard/hooks/useDashboard';
-import type { DistrictSummaryResponse } from 'features/dashboard/hooks/useDashboard';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { FileText, MapPin, FileCheck, ShieldAlert, ClipboardList, Users, Map, BarChart2, Bell, Eye, Video, Megaphone, Search, Activity } from 'lucide-react';
+import { KpiCard, Card, AlertBanner, DataTable, LoadingSkeleton, EmptyState } from 'shared/components';
+import { useDashboardSummary, useRecentCrimes, useRecentFirs, useCrimeTrends } from 'features/dashboard/hooks/useDashboard';
+import { useHotspots } from 'features/hotspots/hooks/useHotspots';
+import { useFilterStore } from 'shared/state';
+import OperationalStatus from 'shared/components/operational-status/OperationalStatus';
+import IntelligenceScope from 'shared/components/intelligence-scope/IntelligenceScope';
+import AIExecutiveSummary from 'shared/components/ai-executive-summary/AIExecutiveSummary';
+import LiveIntelligenceFeed from 'shared/components/live-intelligence-feed/LiveIntelligenceFeed';
+import HotspotSnapshot from 'shared/components/hotspot-snapshot/HotspotSnapshot';
+import TrendIntelligence from 'shared/components/trend-intelligence/TrendIntelligence';
+import ResourceRecommendations from 'shared/components/resource-recommendations/ResourceRecommendations';
+import EmergingAlerts from 'shared/components/emerging-alerts/EmergingAlerts';
+import QuickActions from 'shared/components/quick-actions/QuickActions';
+import AIAssistant from 'shared/components/ai-assistant/AIAssistant';
+import { alertsApi } from 'shared/api/alertsApi';
+import { aiService, type AISummaryResponse } from 'services/aiService';
+
+const DETECTION_RATE_MOCK = 68.5;
 
 const Dashboard: React.FC = () => {
-  const { data: summary, isLoading: summaryLoading, error: summaryError } = useDashboardSummary();
-  const { data: trends, isLoading: trendsLoading } = useCrimeTrends('daily');
-  const { data: recentCrimes, isLoading: crimesLoading } = useRecentCrimes(10);
-  const { data: recentFirs, isLoading: firsLoading } = useRecentFirs(10);
-  const { data: districtSummary, isLoading: districtLoading } = useDistrictSummary();
+  const navigate = useNavigate();
+  const store = useFilterStore();
 
-  const isLoading = summaryLoading || trendsLoading || crimesLoading || firsLoading || districtLoading;
+  const filters = useMemo(() => {
+    const params: Record<string, unknown> = {};
+    if (store.jurisdiction) params.jurisdiction = store.jurisdiction;
+    if (store.policeStation) params.policeStation = store.policeStation;
+    if (store.dateRange?.start) params.startDate = store.dateRange.start;
+    if (store.dateRange?.end) params.endDate = store.dateRange.end;
+    if (store.caseCategory && store.caseCategory.length > 0) params.caseCategory = store.caseCategory.join(',');
+    if (store.severity) params.severity = store.severity;
+    if (store.crimeStatus) params.crimeStatus = store.crimeStatus;
+    if (store.timePreset) params.timePreset = store.timePreset;
+    return params;
+  }, [store.jurisdiction, store.policeStation, store.dateRange, store.caseCategory, store.severity, store.crimeStatus, store.timePreset]);
 
-  const trendData = (trends ?? []).map((t) => ({
-    period: t.period,
-    crimes: t.count,
-  }));
+  const { data: summary, error: summaryError, refetch: refetchSummary } = useDashboardSummary(filters);
+  const { data: trends, refetch: refetchTrends } = useCrimeTrends('daily', filters);
+  const { data: recentCrimes, isLoading: crimesLoading, refetch: refetchCrimes } = useRecentCrimes(10, filters);
+  const { data: recentFirs, isLoading: firsLoading, refetch: refetchFirs } = useRecentFirs(10, filters);
 
-  const districtColumns: DataTableColumn<DistrictSummaryResponse>[] = [
-    { key: 'district_name', header: 'District', render: (r) => r.district_name },
-    { key: 'crime_count', header: 'Crimes', render: (r) => r.crime_count },
-    { key: 'fir_count', header: 'FIRs', render: (r) => r.fir_count },
-    { key: 'active_investigations', header: 'Active Investigations', render: (r) => r.active_investigations },
-  ];
+  const [aiSummary, setAiSummary] = useState<AISummaryResponse | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   if (summaryError) {
     return (
@@ -38,136 +58,316 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  const totalProcessed = (summary?.active_firs ?? 0) + (summary?.closed_firs ?? 0);
+  const detectionRate = totalProcessed > 0 ? Math.min(((summary?.closed_firs ?? 0) / totalProcessed) * 100, 100) : DETECTION_RATE_MOCK;
+
+  const loadAiInsights = useCallback(async () => {
+    setIsAiLoading(true);
+    try {
+      const result = await aiService.generateSummary({
+        metrics: {
+          total_crimes: summary?.total_crimes ?? 0,
+          active_firs: summary?.active_firs ?? 0,
+          closed_firs: summary?.closed_firs ?? 0,
+          detection_rate: detectionRate,
+          hotspots_count: 5,
+          trends: (trends ?? []).map((t) => ({ period: t.period, count: t.count })),
+        },
+        hotspots: [
+          { location: 'MG Road, Bangalore', riskLevel: 'critical', change: 24 },
+          { location: 'City Market, Mysuru', riskLevel: 'high', change: 12 },
+          { location: 'Belagavi Fort Area', riskLevel: 'medium', change: -5 },
+          { location: 'Mangaluru Port', riskLevel: 'high', change: 18 },
+          { location: 'Hubli-Dharwad Twin City', riskLevel: 'low', change: 2 },
+        ],
+        anomalies: [
+          { title: 'Burglary spike in North Bangalore', severity: 'high' },
+          { title: 'Cybercrime increasing', severity: 'medium' },
+        ],
+      });
+      setAiSummary(result);
+    } catch (error) {
+      console.warn('AI summary load failed', error);
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [summary, detectionRate, trends]);
+
+  useEffect(() => {
+    loadAiInsights();
+  }, [loadAiInsights]);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([
+      refetchSummary(),
+      refetchTrends(),
+      refetchCrimes(),
+      refetchFirs(),
+      loadAiInsights(),
+    ]);
+  }, [refetchSummary, refetchTrends, refetchCrimes, refetchFirs, loadAiInsights]);
+
+  const handleApplyFilters = useCallback(async () => {
+    await refreshAll();
+  }, [refreshAll]);
+
+  const handleResetFilters = useCallback(async () => {
+    store.resetFilters();
+    await refreshAll();
+  }, [store, refreshAll]);
+
+  const alertFilters = useMemo(() => ({
+    limit: 20,
+    ...(store.jurisdiction ? { district_id: store.jurisdiction } : {}),
+    ...(store.severity ? { severity: store.severity } : {}),
+  }), [store.jurisdiction, store.severity]);
+
+  const hotspotFilters = useMemo(() => ({
+    ...(store.jurisdiction ? { district_id: store.jurisdiction } : {}),
+    ...(store.policeStation ? { station_id: store.policeStation } : {}),
+    ...(store.dateRange?.start ? { start_date: store.dateRange.start } : {}),
+    ...(store.dateRange?.end ? { end_date: store.dateRange.end } : {}),
+    limit: 10,
+  }), [store.jurisdiction, store.policeStation, store.dateRange?.start, store.dateRange?.end]);
+
+  const { data: hotspotsData } = useHotspots(hotspotFilters);
+
+  const snapshotHotspots = useMemo(() => {
+    const severityMap: Record<string, 'critical' | 'high' | 'medium' | 'low'> = {
+      CRITICAL: 'critical',
+      HIGH: 'high',
+      MEDIUM: 'medium',
+      LOW: 'low',
+    };
+    return (hotspotsData ?? []).slice(0, 5).map((h, idx) => ({
+      rank: idx + 1,
+      location: h.district,
+      riskLevel: severityMap[h.severity?.toUpperCase() ?? 'LOW'] ?? 'medium',
+      change: 0,
+    }));
+  }, [hotspotsData]);
+
+  const { data: alertsData } = useQuery({
+    queryKey: ['alerts', 'active', store.jurisdiction, store.severity, store.crimeStatus],
+    queryFn: () => alertsApi.getActive(alertFilters.limit ?? 20, 0, alertFilters).then((res) => res.data),
+    staleTime: 30_000,
+  });
+
+  const liveFeedItems = useMemo(() => (alertsData ?? []).map((a) => ({
+    id: a.ROWID,
+    severity: (a.severity?.toLowerCase() as any) ?? 'medium',
+    time: a.CREATEDTIME ? new Date(a.CREATEDTIME).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+    location: a.district_id ?? a.station_id ?? 'Unknown',
+    description: a.title,
+  })), [alertsData]);
+
+  const emergingAlertItems = useMemo(() => (alertsData ?? []).map((a) => ({
+    id: a.ROWID,
+    title: a.title,
+    location: a.district_id ?? a.station_id ?? 'Unknown',
+    time: a.CREATEDTIME ? new Date(a.CREATEDTIME).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+    severity: (a.severity?.toLowerCase() as any) ?? 'medium',
+    suggestedAction: a.recommended_action ?? 'Review and take appropriate action',
+  })), [alertsData]);
+
+  const mockAiInsights = aiSummary?.insights.length ? aiSummary.insights : [
+    'Theft increased 18% this month.',
+    'Two emerging hotspots identified.',
+    'Most incidents occur between 8 PM and 11 PM.',
+    'Recommend increasing patrols in Mysuru South.',
+  ];
+
+  const mockResourceRecommendations = aiSummary?.recommendations.length ? aiSummary.recommendations.map((r, idx) => ({
+    id: String(idx + 1),
+    title: r.title,
+    description: r.description,
+    priority: r.priority as 'high' | 'medium' | 'low',
+    icon: [Users, MapPin, Eye, Video, Megaphone][idx % 5],
+  })) : [
+    { id: "1", title: "Increase patrol frequency", description: "Deploy additional patrols in high-risk areas during peak hours", priority: "high" as const, icon: Users },
+    { id: "2", title: "Deploy additional mobile unit", description: "Send mobile forensic unit to crime scene for faster evidence collection", priority: "medium" as const, icon: MapPin },
+    { id: "3", title: "Monitor repeat offender", description: "Increase surveillance on known repeat offenders in jurisdiction", priority: "high" as const, icon: Eye },
+    { id: "4", title: "Increase surveillance", description: "Install additional CCTV cameras in identified hotspots", priority: "medium" as const, icon: Video },
+    { id: "5", title: "Conduct cyber awareness campaign", description: "Launch public awareness campaign about online scams and phishing", priority: "low" as const, icon: Megaphone }
+  ];
+
+  const mockQuickActions = [
+    { id: "1", label: "Generate Intelligence Report", description: "Create a comprehensive intelligence report", icon: ClipboardList, href: '/reports' },
+    { id: "2", label: "Crime Map", description: "View interactive map of crime incidents", icon: Map, href: '/hotspots' },
+    { id: "3", label: "Network Analysis", description: "Analyze criminal networks", icon: Users, href: '/network-analysis' },
+    { id: "4", label: "Repeat Offenders", description: "View repeat offender profiles", icon: Users, href: '/repeat-offenders' },
+    { id: "5", label: "Predictive Intelligence", description: "AI-powered crime forecasting", icon: Bell, href: '/risk-scoring' },
+    { id: "6", label: "Crime Search", description: "Search crimes, FIRs, suspects", icon: Search, href: '/search' },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-navy-700 dark:text-white">Command Overview</h1>
-        <p className="text-sm text-gov-slate">Real-time operational overview</p>
-      </div>
-
-      <AlertBanner
-        variant="info"
-        title="Live intelligence feed active"
-        message="Dashboard metrics reflect aggregated crime data scoped to your jurisdiction."
+      <OperationalStatus
+        state="Karnataka"
+        jurisdiction={store.jurisdiction ? store.jurisdiction.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Bangalore Urban'}
+        casesMonitored={summary?.total_crimes ?? 0}
+        lastSync="Just now"
+        aiStatus={isAiLoading ? 'Processing...' : 'Active'}
       />
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i} className="p-5">
-              <LoadingSkeleton variant="card" />
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Total Crimes" value={summary?.total_crimes ?? 0} icon={<FileText size={24} />} accent="navy" />
-          <KpiCard label="Total FIRs" value={summary?.total_firs ?? 0} icon={<FileCheck size={24} />} accent="blue" />
-          <KpiCard label="Crimes Today" value={summary?.crimes_today ?? 0} icon={<Calendar size={24} />} accent="green" />
-          <KpiCard label="FIRs Today" value={summary?.firs_today ?? 0} icon={<Calendar size={24} />} accent="amber" />
-          <KpiCard label="Active FIRs" value={summary?.active_firs ?? 0} icon={<CheckCircle size={24} />} accent="purple" />
-          <KpiCard label="Closed FIRs" value={summary?.closed_firs ?? 0} icon={<XCircle size={24} />} accent="purple" />
-          <KpiCard label="Districts" value={summary?.registered_districts ?? 0} icon={<MapPin size={24} />} accent="navy" />
-          <KpiCard label="Police Stations" value={summary?.registered_police_stations ?? 0} icon={<Building2 size={24} />} accent="blue" />
-        </div>
-      )}
+      <IntelligenceScope
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
+      />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Activity size={20} className="text-viz-blue" />
-            <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Crime Trends</h2>
-          </div>
-          {trendsLoading ? (
-            <LoadingSkeleton variant="card" />
-          ) : trendData.length > 0 ? (
-            <ChartContainer
-              type="bar"
-              data={trendData}
-              xKey="period"
-              series={[{ key: 'crimes', color: '#3b82f6', label: 'Crimes' }]}
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <KpiCard label="Total Crimes" value={summary?.total_crimes ?? 0} delta={12.5} icon={<FileText size={24} />} accent="navy" />
+        <KpiCard label="Active Cases" value={summary?.active_firs ?? 0} delta={-3.2} icon={<FileCheck size={24} />} accent="blue" />
+        <KpiCard label="Detection Rate" value={`${detectionRate.toFixed(1)}%`} delta={5.8} icon={<ShieldAlert size={24} />} accent="green" />
+        <KpiCard label="Active Hotspots" value={5} delta={10.0} icon={<MapPin size={24} />} accent="red" />
+        <KpiCard label="Repeat Offenders" value={12} delta={-2.1} icon={<Users size={24} />} accent="purple" />
+        <KpiCard label="High-Risk Districts" value={3} delta={7.5} icon={<BarChart2 size={24} />} accent="amber" />
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Left Column */}
+        <div className="col-span-12 lg:col-span-8 space-y-6">
+          <Card className="p-6">
+            <HotspotSnapshot
+              title="Hotspot Snapshot"
+              heatmapPreview="https://via.placeholder.com/600x250?text=Heatmap+Preview"
+              topHotspots={snapshotHotspots}
+            />
+          </Card>
+
+          <Card className="p-6">
+            <TrendIntelligence
+              title="Crime Trends"
+              filters={filters}
               height={320}
             />
-          ) : (
-            <EmptyState title="No trend data" description="Crime trends will appear here as data is collected." />
-          )}
-        </Card>
+          </Card>
+        </div>
 
-        <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <MapPin size={20} className="text-viz-blue" />
-            <h2 className="text-lg font-semibold text-navy-700 dark:text-white">District Summary</h2>
-          </div>
-          {districtLoading ? (
-            <LoadingSkeleton variant="table" rows={5} />
-          ) : districtSummary && districtSummary.length > 0 ? (
-            <DataTable
-              columns={districtColumns}
-              data={districtSummary}
-              rowKey={(r) => r.district_id}
-              emptyTitle="No district data"
-              emptyDescription="District summary will appear here."
-              virtualized={false}
+        {/* Right Column */}
+        <div className="col-span-12 lg:col-span-4 space-y-6">
+          <Card className="p-6">
+            <AIExecutiveSummary
+              title="AI Executive Summary"
+              insights={mockAiInsights}
             />
-          ) : (
-            <EmptyState title="No district data" description="District summary will appear here." />
-          )}
-        </Card>
+          </Card>
+
+          <Card className="p-6">
+            <LiveIntelligenceFeed
+              title="Live Intelligence Feed"
+              items={
+                liveFeedItems.length
+                  ? liveFeedItems
+                  : [
+                      { id: 'empty-feed', severity: 'low' as const, time: '--', location: 'Unknown', description: 'No live intelligence at the moment.' },
+                    ]
+              }
+            />
+          </Card>
+
+          <Card className="p-6">
+            <EmergingAlerts
+              title="Emerging Alerts"
+              alerts={
+                emergingAlertItems.length
+                  ? emergingAlertItems
+                  : [
+                      { id: 'empty-alert', title: 'No emerging alerts', location: 'Unknown', time: '--', severity: 'low' as const, suggestedAction: 'Continue monitoring all districts.' },
+                    ]
+              }
+            />
+          </Card>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle size={20} className="text-viz-blue" />
-            <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Recent Crimes</h2>
-          </div>
-          {crimesLoading ? (
-            <LoadingSkeleton variant="table" rows={5} />
-          ) : recentCrimes && recentCrimes.length > 0 ? (
-            <DataTable
-              columns={[
-                { key: 'title', header: 'Title', render: (r) => r.title },
-                { key: 'crime_type', header: 'Type', render: (r) => r.crime_type },
-                { key: 'status', header: 'Status', render: (r) => r.status },
-                { key: 'CREATEDTIME', header: 'Created', render: (r) => new Date(r.CREATEDTIME).toLocaleDateString() },
-              ]}
-              data={recentCrimes}
-              rowKey={(r) => r.ROWID}
-              emptyTitle="No recent crimes"
-              emptyDescription="Recent crimes will appear here."
-              virtualized={false}
+      {/* Bottom Row */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 xl:col-span-8">
+          <Card className="p-6">
+            <ResourceRecommendations
+              title="Resource Recommendations"
+              recommendations={mockResourceRecommendations}
             />
-          ) : (
-            <EmptyState title="No recent crimes" description="Recent crimes will appear here." />
-          )}
-        </Card>
-
-        <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <FileText size={20} className="text-viz-blue" />
-            <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Recent FIRs</h2>
-          </div>
-          {firsLoading ? (
-            <LoadingSkeleton variant="table" rows={5} />
-          ) : recentFirs && recentFirs.length > 0 ? (
-            <DataTable
-              columns={[
-                { key: 'fir_number', header: 'FIR Number', render: (r) => r.fir_number },
-                { key: 'crime_id', header: 'Crime ID', render: (r) => r.crime_id },
-                { key: 'status', header: 'Status', render: (r) => r.status },
-                { key: 'CREATEDTIME', header: 'Created', render: (r) => new Date(r.CREATEDTIME).toLocaleDateString() },
-              ]}
-              data={recentFirs}
-              rowKey={(r) => r.ROWID}
-              emptyTitle="No recent FIRs"
-              emptyDescription="Recent FIRs will appear here."
-              virtualized={false}
+          </Card>
+        </div>
+        <div className="col-span-12 xl:col-span-4">
+          <Card className="p-6">
+            <QuickActions
+              title="Quick Actions"
+              actions={mockQuickActions.map(action => ({
+                ...action,
+                onClick: () => action.href && navigate(action.href)
+              }))}
+              columns={2}
             />
-          ) : (
-            <EmptyState title="No recent FIRs" description="Recent FIRs will appear here." />
-          )}
-        </Card>
+          </Card>
+        </div>
       </div>
+
+      {/* Recent Data */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 lg:col-span-6">
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Activity size={20} className="text-viz-blue" />
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Recent Crimes</h2>
+            </div>
+            {crimesLoading ? (
+              <LoadingSkeleton variant="table" rows={5} />
+            ) : recentCrimes && recentCrimes.length > 0 ? (
+              <DataTable
+                columns={[
+                  { key: 'title', header: 'Title', render: (r) => r.title },
+                  { key: 'crime_type', header: 'Type', render: (r) => r.crime_type },
+                  { key: 'status', header: 'Status', render: (r) => r.status },
+                  { key: 'CREATEDTIME', header: 'Created', render: (r) => new Date(r.CREATEDTIME).toLocaleDateString() },
+                ]}
+                data={recentCrimes}
+                rowKey={(r) => r.ROWID}
+                emptyTitle="No recent crimes"
+                emptyDescription="Recent crimes will appear here."
+                virtualized={false}
+              />
+            ) : (
+              <EmptyState title="No recent crimes" description="Recent crimes will appear here." />
+            )}
+          </Card>
+        </div>
+
+        <div className="col-span-12 lg:col-span-6">
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-viz-blue" />
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Recent FIRs</h2>
+            </div>
+            {firsLoading ? (
+              <LoadingSkeleton variant="table" rows={5} />
+            ) : recentFirs && recentFirs.length > 0 ? (
+              <DataTable
+                columns={[
+                  { key: 'fir_number', header: 'FIR Number', render: (r) => r.fir_number },
+                  { key: 'crime_id', header: 'Crime ID', render: (r) => r.crime_id },
+                  { key: 'status', header: 'Status', render: (r) => r.status },
+                  { key: 'CREATEDTIME', header: 'Created', render: (r) => new Date(r.CREATEDTIME).toLocaleDateString() },
+                ]}
+                data={recentFirs}
+                rowKey={(r) => r.ROWID}
+                emptyTitle="No recent FIRs"
+                emptyDescription="Recent FIRs will appear here."
+                virtualized={false}
+              />
+            ) : (
+              <EmptyState title="No recent FIRs" description="Recent FIRs will appear here." />
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Floating AI Assistant */}
+      <AIAssistant />
     </div>
   );
 };

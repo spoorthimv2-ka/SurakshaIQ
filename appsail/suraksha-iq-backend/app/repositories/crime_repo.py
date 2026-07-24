@@ -15,8 +15,16 @@ class CrimeRepository(BaseCatalystRepository):
     async def find_by_district(self, district_id: str, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves crimes scoped to a specific district."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE district_id = '{district_id}' ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE district_id = {self._zcql_escape(district_id)} "
+                f"ORDER BY {sort_by} {sort_order.upper()} "
+                f"LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             return [item[self.table_name] for item in result if self.table_name in item]
         except CatalystError as e:
@@ -26,8 +34,16 @@ class CrimeRepository(BaseCatalystRepository):
     async def find_by_station(self, station_id: str, limit: int = 100, offset: int = 0, sort_by: str = "CREATEDTIME", sort_order: str = "DESC") -> List[Dict[str, Any]]:
         """Retrieves crimes scoped to a specific police station."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE station_id = '{station_id}' ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} "
+                f"WHERE station_id = {self._zcql_escape(station_id)} "
+                f"ORDER BY {sort_by} {sort_order.upper()} "
+                f"LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             return [item[self.table_name] for item in result if self.table_name in item]
         except CatalystError as e:
@@ -37,15 +53,14 @@ class CrimeRepository(BaseCatalystRepository):
     async def search(self, search_term: str, district_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """Performs a text search on crime title, description, or type."""
         try:
-            query = (
-                f"SELECT * FROM {self.table_name} "
-                f"WHERE (title LIKE '%{search_term}%' "
-                f"OR description LIKE '%{search_term}%' "
-                f"OR crime_type LIKE '%{search_term}%')"
-            )
+            clauses: List[str] = [
+                f"(title LIKE {self._zcql_like(search_term)} "
+                f"OR description LIKE {self._zcql_like(search_term)} "
+                f"OR crime_type LIKE {self._zcql_like(search_term)})"
+            ]
             if district_id:
-                query += f" AND district_id = '{district_id}'"
-            query += f" LIMIT {limit}"
+                clauses.append(f"district_id = {self._zcql_escape(district_id)}")
+            query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join(clauses)} LIMIT {int(limit)}"
             result = self.zcql.execute_query(query)
             return [item[self.table_name] for item in result if self.table_name in item]
         except CatalystError as e:
@@ -68,23 +83,43 @@ class CrimeRepository(BaseCatalystRepository):
     ) -> List[Dict[str, Any]]:
         """Retrieves crimes with optional filters."""
         try:
-            offset_val = offset if offset > 0 else 1
-            query = f"SELECT * FROM {self.table_name} WHERE 1=1"
+            self._validate_column(self.table_name, sort_by)
+            if sort_order.upper() not in ("ASC", "DESC"):
+                raise DataValidationError("sort_order must be ASC or DESC")
+            clauses: List[str] = ["1=1"]
             if keyword:
-                query += f" AND (title LIKE '%{keyword}%' OR description LIKE '%{keyword}%' OR crime_type LIKE '%{keyword}%')"
+                clauses.append(
+                    f"(title LIKE {self._zcql_like(keyword)} "
+                    f"OR description LIKE {self._zcql_like(keyword)} "
+                    f"OR crime_type LIKE {self._zcql_like(keyword)} "
+                    f"OR victim_name LIKE {self._zcql_like(keyword)} "
+                    f"OR suspect_name LIKE {self._zcql_like(keyword)} "
+                    f"OR alias LIKE {self._zcql_like(keyword)} "
+                    f"OR vehicle_number LIKE {self._zcql_like(keyword)} "
+                    f"OR mobile_number LIKE {self._zcql_like(keyword)} "
+                    f"OR weapon LIKE {self._zcql_like(keyword)} "
+                    f"OR modus_operandi LIKE {self._zcql_like(keyword)} "
+                    f"OR keywords LIKE {self._zcql_like(keyword)} "
+                    f"OR ipc_sections LIKE {self._zcql_like(keyword)} "
+                    f"OR location LIKE {self._zcql_like(keyword)})"
+                )
             if district_id:
-                query += f" AND district_id = '{district_id}'"
+                clauses.append(f"district_id = {self._zcql_escape(district_id)}")
             if station_id:
-                query += f" AND station_id = '{station_id}'"
+                clauses.append(f"station_id = {self._zcql_escape(station_id)}")
             if crime_type:
-                query += f" AND crime_type = '{crime_type}'"
+                clauses.append(f"crime_type = {self._zcql_escape(crime_type)}")
             if status:
-                query += f" AND status = '{status}'"
+                clauses.append(f"status = {self._zcql_escape(status)}")
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
-            query += f" ORDER BY {sort_by} {sort_order} LIMIT {offset_val}, {limit}"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            offset_val = max(int(offset), 0)
+            query = (
+                f"SELECT * FROM {self.table_name} WHERE {' AND '.join(clauses)} "
+                f"ORDER BY {sort_by} {sort_order.upper()} LIMIT {offset_val}, {int(limit)}"
+            )
             result = self.zcql.execute_query(query)
             return [item[self.table_name] for item in result if self.table_name in item]
         except CatalystError as e:
@@ -94,11 +129,13 @@ class CrimeRepository(BaseCatalystRepository):
     async def count_by_date_range(self, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts crimes within an optional date range."""
         try:
-            query = f"SELECT COUNT(ROWID) FROM {self.table_name} WHERE 1=1"
+            clauses: List[str] = []
             if date_from:
-                query += f" AND CREATEDTIME >= '{date_from}'"
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
             if date_to:
-                query += f" AND CREATEDTIME <= '{date_to}'"
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}{where}"
             result = self.zcql.execute_query(query)
             if result and len(result) > 0:
                 first_row = result[0]
@@ -114,10 +151,14 @@ class CrimeRepository(BaseCatalystRepository):
     async def check_duplicate(self, title: str, district_id: str, station_id: str, exclude_id: Optional[str] = None) -> bool:
         """Checks if a duplicate crime exists."""
         try:
-            query = f"SELECT ROWID FROM {self.table_name} WHERE title = '{title}' AND district_id = '{district_id}' AND station_id = '{station_id}'"
+            clauses = [
+                f"title = {self._zcql_escape(title)}",
+                f"district_id = {self._zcql_escape(district_id)}",
+                f"station_id = {self._zcql_escape(station_id)}",
+            ]
             if exclude_id:
-                query += f" AND ROWID != '{exclude_id}'"
-            query += " LIMIT 1"
+                clauses.append(f"ROWID != {self._zcql_escape(exclude_id)}")
+            query = f"SELECT ROWID FROM {self.table_name} WHERE {' AND '.join(clauses)} LIMIT 1"
             result = self.zcql.execute_query(query)
             return len(result) > 0
         except CatalystError as e:

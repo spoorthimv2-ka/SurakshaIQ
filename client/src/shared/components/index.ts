@@ -22,3 +22,15 @@ export { default as AlertBanner } from './AlertBanner';
 export { default as ErrorState } from './ErrorState';
 export { default as LoadingSkeleton } from './LoadingSkeleton';
 export { default as ConfirmDialog } from './ConfirmDialog';
+
+// Command Center components
+export { default as OperationalStatus } from './operational-status/OperationalStatus';
+export { default as IntelligenceScope } from './intelligence-scope/IntelligenceScope';
+export { default as AIExecutiveSummary } from './ai-executive-summary/AIExecutiveSummary';
+export { default as LiveIntelligenceFeed } from './live-intelligence-feed/LiveIntelligenceFeed';
+export { default as HotspotSnapshot } from './hotspot-snapshot/HotspotSnapshot';
+export { default as TrendIntelligence } from './trend-intelligence/TrendIntelligence';
+export { default as ResourceRecommendations } from './resource-recommendations/ResourceRecommendations';
+export { default as EmergingAlerts } from './emerging-alerts/EmergingAlerts';
+export { default as QuickActions } from './quick-actions/QuickActions';
+export { default as AIAssistant } from './ai-assistant/AIAssistant';

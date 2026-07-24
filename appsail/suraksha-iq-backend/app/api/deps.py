@@ -1,14 +1,16 @@
 from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.models.enums import Role, Permission, ROLE_PERMISSIONS_MAP
 from app.security.utils import raise_unauthorized, raise_forbidden
 from app.security.jwt import verify_access_token
 from app.repositories.catalyst_officer_repo import CatalystOfficerRepository
+from app.config.settings import settings
+from app.core.logger import logger
 
 # Swagger/OpenAPI Bearer authentication
-
-bearer_scheme = HTTPBearer()
+# auto_error=False so DEV_SKIP_AUTH can run before credentials are required.
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def _get_attr(officer: Dict[str, Any], key: str, default=None):
@@ -91,8 +93,35 @@ def _build_officer_dict(officer: Dict[str, Any]) -> Dict[str, Any]:
 
 async def get_current_user(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-):   
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+):
+    # TODO: Remove DEV_SKIP_AUTH bypass before any demo/deployment.
+    #       Must be confirmed OFF in production. See KNOWN_ISSUES.md.
+    # TEMPORARY DEV AUTH BYPASS — ONLY ACTIVE WHEN:
+    #   1. DEV_SKIP_AUTH=true (set in local .env, never committed)
+    #   2. environment=development AND debug=true
+    # If either condition is false, real auth is enforced below.
+    if settings.dev_skip_auth and settings.environment == "development" and settings.debug:
+        logger.warning(
+            "⚠️  AUTH BYPASSED — DEV_SKIP_AUTH IS ON — DO NOT USE IN PRODUCTION"
+        )
+        mock_permissions = [p.value for p in ROLE_PERMISSIONS_MAP.get(Role.SYSTEM_ADMINISTRATOR, [])]
+        mock_officer: Dict[str, Any] = {
+            "ROWID": "DEV-BY-PASS-ROWID",
+            "user_id": "dev-bypass-user-id",
+            "name": "Dev Bypass Officer",
+            "email": "dev-bypass@suraksha.test",
+            "role": "SYSTEM_ADMINISTRATOR",
+            "badge_number": None,
+            "status": "ACTIVE",
+            "station_id": "DEV-STATION-001",
+            "permissions": mock_permissions,
+        }
+        return mock_officer
+
+    if not credentials:
+        raise_unauthorized("Not authenticated")
+
     token = credentials.credentials
     payload = verify_access_token(token)
 

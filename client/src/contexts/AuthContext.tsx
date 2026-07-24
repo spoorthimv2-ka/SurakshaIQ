@@ -33,10 +33,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => authService.getStoredToken());
   const [loading, setLoading] = useState<boolean>(true);
 
-
   const refreshSession = useCallback(async () => {
     setLoading(true);
     try {
+      if (import.meta.env.VITE_DEV_SKIP_AUTH === 'true') {
+        console.warn(
+          '⚠️  AUTH BYPASSED — VITE_DEV_SKIP_AUTH IS ON — DO NOT USE IN PRODUCTION'
+        );
+        const mockOfficer: Officer = {
+          id: 'DEV-BY-PASS-ROWID',
+          name: 'Dev Bypass Officer',
+          email: 'dev-bypass@suraksha.test',
+          rank: '',
+          designation: '',
+          role: 'SYSTEM_ADMINISTRATOR',
+          jurisdiction: { type: 'STATE' },
+          permissions: [
+            'MANAGE_USERS',
+            'MANAGE_ROLES',
+            'MANAGE_ALERT_RULES',
+            'VIEW_CRIMES',
+            'VIEW_ANALYTICS',
+          ],
+          ROWID: 'DEV-BY-PASS-ROWID',
+          user_id: 'dev-bypass-user-id',
+          station_id: 'DEV-STATION-001',
+        };
+        setUser(mockOfficer);
+        setToken('dev-bypass-token');
+        return;
+      }
+
       const storedToken = authService.getStoredToken();
       if (!storedToken) {
         setUser(null);
@@ -78,7 +105,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await authService.logout();
     setUser(null);
     setToken(null);
-    window.location.href = "/login"
   },[]);
 
   const hasPermission = useCallback(

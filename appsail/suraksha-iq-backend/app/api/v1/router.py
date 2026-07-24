@@ -4,6 +4,7 @@ from .admin.routes import router as admin_router
 from .alerts.routes import router as alerts_router
 from .anomaly.routes import router as anomaly_router
 from .auth.routes import router as auth_router
+from .crime_criminal_links.routes import router as crime_criminal_links_router
 from .crimes.routes import router as crimes_router
 from .dashboard.routes import router as dashboard_router
 from .districts.routes import router as districts_router
@@ -22,6 +23,7 @@ api_router.include_router(admin_router, prefix="/admin", tags=["Admin"])
 api_router.include_router(alerts_router, prefix="/alerts", tags=["Alerts"])
 api_router.include_router(anomaly_router, prefix="/anomaly", tags=["Anomaly"])
 api_router.include_router(auth_router, prefix="/auth", tags=["Auth"])
+api_router.include_router(crime_criminal_links_router, prefix="/crime-criminal-links", tags=["Crime-Criminal Links"])
 api_router.include_router(crimes_router, prefix="/crimes", tags=["Crimes"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(districts_router, prefix="/districts", tags=["Districts"])

@@ -123,5 +123,7 @@ export const router = createBrowserRouter([
     ],
   },
 ], {
-  basename: import.meta.env.VITE_BASE_PATH || '/',
+  // Vite's BASE_URL is automatically derived from vite.config.ts `base`.
+  // This keeps React Router's basename in sync with the deployed subpath.
+  basename: import.meta.env.BASE_URL || '/',
 });
