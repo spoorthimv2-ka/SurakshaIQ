@@ -61,7 +61,7 @@ _CRIME_TYPES = [
     "murder", "rape", "kidnapping", "burglary", "fraud"
 ]
 
-_STATUSES = ["open", "under-investigation", "closed", "unsolved"]
+_STATUSES = ["ACTIVE", "INACTIVE", "ARCHIVED"]
 _SEVERITIES = ["low", "medium", "high", "critical"]
 
 _TITLE_TEMPLATES = [
@@ -90,7 +90,7 @@ def _add(did: str, dname: str, lat: float, lon: float) -> None:
         "region_code": f"KA-{did}",
         "latitude": lat,
         "longitude": lon,
-        "status": "active",
+        "status": "ACTIVE",
         "code": f"KD{did}",
     }))
 
@@ -106,7 +106,7 @@ def _seed_large_dataset() -> None:
             "region_code": f"KA-{code}",
             "latitude": lat,
             "longitude": lon,
-            "status": "active",
+            "status": "ACTIVE",
             "code": code,
         }))
         dist_ids.append(code)
@@ -125,7 +125,7 @@ def _seed_large_dataset() -> None:
                 "district_id": did,
                 "latitude": lat,
                 "longitude": lon,
-                "status": "active",
+                "status": "ACTIVE",
             }))
             station_counter += 1
 
@@ -180,7 +180,7 @@ def _seed_large_dataset() -> None:
         sex = rng.choice(["MALE", "FEMALE"])
         age = rng.randint(18, 65)
         risk = rng.choice(["low", "medium", "high", "critical"])
-        stat = rng.choice(["open", "under-investigation", "closed", "unsolved"])
+        stat = rng.choice(["ACTIVE", "INACTIVE", "ARCHIVED"])
         did = rng.choice(dist_ids)
         _MOCK_DATA["Criminal"].append(_make_row({
             "ROWID": f"CRMNL-{str(criminal_counter).zfill(3)}",
@@ -199,7 +199,7 @@ def _seed_large_dataset() -> None:
     for _ in range(8000):
         did, sid = rng.choice(district_station_pairs)
         ctype = rng.choice(crime_types)
-        stat = rng.choices(statuses, weights=[40, 30, 20, 10], k=1)[0]
+        stat = rng.choices(statuses, weights=[70, 20, 10], k=1)[0]
         sev = rng.choices(severities, weights=[30, 30, 25, 15], k=1)[0]
         lat, lon = rand_loc(did)
         loc = rng.choice(locations)
@@ -310,7 +310,7 @@ def _seed_large_dataset() -> None:
     for _ in range(200):
         did = rng.choice(dist_ids)
         sev = rng.choices(["low", "medium", "high", "critical"], weights=[20, 30, 35, 15], k=1)[0]
-        stat = rng.choice(["open", "under-investigation", "closed", "unsolved"])
+        stat = rng.choice(["ACTIVE", "INACTIVE", "ARCHIVED"])
         atype = rng.choice(["CRIME_SPIKE", "ASSAULT_ALERT", "CYBER_ALERT", "HOTSPOT_ALERT", "BURGLARY_ALERT"])
         _MOCK_DATA["Alert"].append(_make_row({
             "ROWID": f"ALT-{str(alert_counter).zfill(3)}",
@@ -338,17 +338,18 @@ def _seed_large_dataset() -> None:
             "parameters_json": "{}",
             "created_by_officer_id": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "created_at": rand_ts(),
-            "status": "active",
+            "status": "ACTIVE",
         }))
 
     for i in range(1, 11):
         _MOCK_DATA["AuditLog"].append(_make_row({
             "ROWID": f"AUDIT-{str(i).zfill(3)}",
+            "log_id": f"AUDIT-{str(i).zfill(3)}",
             "action": rng.choice(["LOGIN", "LOGOUT", "CREATE_FIR", "UPDATE_CASE", "SEARCH"]),
             "user": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "target": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "metadata": {"ip": "127.0.0.1"},
-            "created_at": rand_ts(),
+            "timestamp": rand_ts(),
         }))
 
     for i in range(1, 21):
@@ -363,14 +364,14 @@ def _seed_large_dataset() -> None:
             "designation": "Police",
             "hashed_password": None,
             "police_station_id": rng.choice(stn_map.get(did, [{"ROWID": "STN-001"}]))["ROWID"],
-            "status": "active",
+            "status": "ACTIVE",
         }))
         _MOCK_DATA["User"].append(_make_row({
             "ROWID": f"USR-{str(i).zfill(3)}",
             "name": f"Officer {i}",
             "email": f"officer{i}@suraksha.test",
             "role": rng.choice(["OFFICER", "ANALYST", "ADMIN"]),
-            "status": "active",
+            "status": "ACTIVE",
         }))
 
 
@@ -487,7 +488,7 @@ class MockTable:
         return len(rows)
 
     def find_active(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
-        rows = [r for r in _MOCK_DATA.get(self.table_name, []) if r.get("status") in ("active", "open", "under-investigation")]
+        rows = [r for r in _MOCK_DATA.get(self.table_name, []) if r.get("status") in ("ACTIVE",)]
         if offset > 0:
             rows = rows[offset:offset + limit]
         else:

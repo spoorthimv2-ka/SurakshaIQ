@@ -6,10 +6,10 @@ zcql = app.zcql()
 r1 = zcql.execute_query('SELECT * FROM Crime LIMIT 5')
 print('Simple select:', len(r1))
 
-r2 = zcql.execute_query("SELECT * FROM Crime WHERE status = 'open' LIMIT 3")
+r2 = zcql.execute_query("SELECT * FROM Crime WHERE status = 'ACTIVE' LIMIT 3")
 print('Filtered by status:', len(r2))
 
-r3 = zcql.execute_query("SELECT * FROM Crime WHERE status = 'open' AND crime_type = 'theft' LIMIT 3")
+r3 = zcql.execute_query("SELECT * FROM Crime WHERE status = 'ACTIVE' AND crime_type = 'theft' LIMIT 3")
 print('Filtered by status AND type:', len(r3))
 
 r4 = zcql.execute_query('SELECT COUNT(ROWID) FROM District')
@@ -26,7 +26,7 @@ r7 = zcql.execute_query("SELECT * FROM Crime WHERE district_id = 'bangalore-urba
 print('By district:', len(r7))
 
 # Test find_all_with_filters style query
-r8 = zcql.execute_query("SELECT * FROM Crime WHERE 1=1 AND status = 'open' AND crime_type = 'cybercrime' LIMIT 10, 20")
+r8 = zcql.execute_query("SELECT * FROM Crime WHERE 1=1 AND status = 'ACTIVE' AND crime_type = 'cybercrime' LIMIT 10, 20")
 print('find_all_with_filters style:', len(r8))
 
 # Test find_by_district style
@@ -34,5 +34,5 @@ r9 = zcql.execute_query("SELECT * FROM Crime WHERE district_id = 'bangalore-urba
 print('find_by_district style:', len(r9))
 
 # Test FIR count by status
-r10 = zcql.execute_query("SELECT COUNT(ROWID) FROM FIR WHERE status = 'open'")
+r10 = zcql.execute_query("SELECT COUNT(ROWID) FROM FIR WHERE status = 'ACTIVE'")
 print('Count open FIRs:', r10[0]['FIR']['COUNT(ROWID)'])

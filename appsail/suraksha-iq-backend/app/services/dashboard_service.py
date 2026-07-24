@@ -41,7 +41,7 @@ class DashboardService:
         if filters.get("severity"):
             filtered = [i for i in filtered if i.get("severity") == filters["severity"]]
         if filters.get("crime_status"):
-            filtered = [i for i in filtered if i.get("status") == filters["crime_status"]]
+            filtered = [i for i in filtered if i.get("status", "").upper() == filters["crime_status"].upper()]
         if filters.get("start_date") or filters.get("end_date"):
             start = filters.get("start_date")
             end = filters.get("end_date")
