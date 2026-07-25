@@ -98,9 +98,13 @@ export const router = createBrowserRouter([
                  element: lazy(() => import('features/search/pages/Search')),
                },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES.admin} />,
-                 children: [{ path: 'admin', element: lazy(() => import('features/admin/pages/Admin')) }],
-               },
+                  element: <RoleProtectedRoute roles={MODULE_ROLES.admin} />,
+                  children: [{ path: 'admin', element: lazy(() => import('features/admin/pages/Admin')) }],
+                },
+                {
+                  element: <RoleProtectedRoute roles={MODULE_ROLES.timeline} />,
+                  children: [{ path: 'timeline', element: lazy(() => import('features/timeline/pages/Timeline')) }],
+                },
               {
                 element: <RoleProtectedRoute roles={MODULE_ROLES['crime-management']} />,
                 children: [{ path: 'crimes', element: lazy(() => import('features/crime-management/pages/CrimeManagement')) }],

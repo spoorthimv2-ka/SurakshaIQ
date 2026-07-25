@@ -370,7 +370,7 @@ def _seed_large_dataset() -> None:
             "ROWID": f"USR-{str(i).zfill(3)}",
             "name": f"Officer {i}",
             "email": f"officer{i}@suraksha.test",
-            "role": rng.choice(["OFFICER", "ANALYST", "ADMIN"]),
+            "role": rng.choice(["SYSTEM_ADMINISTRATOR", "STATE_COMMAND", "DISTRICT_SP", "STATION_HOUSE_OFFICER", "INVESTIGATING_OFFICER", "CID_ANALYST"]),
             "status": "ACTIVE",
         }))
 

@@ -86,6 +86,8 @@ const Dashboard: React.FC = () => {
         hotspots: (hotspots ?? []).map((h) => ({
           location: h.district ?? 'Unknown',
           riskLevel: h.severity?.toLowerCase() ?? 'medium',
+          crimeCount: h.crime_count,
+          hotspotScore: h.hotspot_score,
           change: 0,
         })),
         anomalies: (anomalies ?? []).map((a) => ({
@@ -163,7 +165,7 @@ const Dashboard: React.FC = () => {
   const { data: hotspotsData } = useHotspots(hotspotFilters);
 
   const snapshotHotspots = useMemo(() => {
-    const severityMap: Record<string, 'critical' | 'high' | 'medium' | 'low'> = {
+    const severityMap: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
       CRITICAL: 'critical',
       HIGH: 'high',
       MEDIUM: 'medium',
@@ -172,8 +174,11 @@ const Dashboard: React.FC = () => {
     return (hotspotsData ?? []).slice(0, 5).map((h, idx) => ({
       rank: idx + 1,
       location: h.district,
+      station: h.police_station,
       riskLevel: severityMap[h.severity?.toUpperCase() ?? 'LOW'] ?? 'medium',
-      change: 0,
+      crimeCount: h.crime_count,
+      hotspotScore: h.hotspot_score,
+      trend: h.hotspot_score >= 20 ? 'rising' : h.hotspot_score >= 10 ? 'stable' : 'declining',
     }));
   }, [hotspotsData]);
 
@@ -267,8 +272,7 @@ const Dashboard: React.FC = () => {
               />
             </div>
             <HotspotSnapshot
-              title=""
-              heatmapPreview="heatmap-placeholder.svg"
+              title="Hotspot Snapshot"
               topHotspots={snapshotHotspots}
             />
             {explainState['hotspots']?.explanation && (

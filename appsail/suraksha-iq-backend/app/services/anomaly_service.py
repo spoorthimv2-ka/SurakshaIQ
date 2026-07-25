@@ -114,47 +114,106 @@ class AnomalyService:
         """Retrieves anomalies for all districts."""
         
         anomalies = await self.get_anomalies(officer, limit=1000)
-        district_anomalies: List[DistrictAnomaly] = []
+        district_data: Dict[str, Dict[str, Any]] = {}
+
         for a in anomalies:
             if a.affected_entity_type != "District":
                 continue
-            district_anomalies.append(
-                DistrictAnomaly(
-                    district_id=a.affected_entity_id,
-                    district_name=a.affected_entity_name,
-                    anomaly_score=a.anomaly_score,
-                    severity=a.severity,
-                    crime_count=0,
-                    fir_count=0,
-                    hotspot_score=0.0,
-                    contributing_factors=a.contributing_factors,
-                )
+            did = a.affected_entity_id
+            if did not in district_data:
+                district_data[did] = {
+                    "district_name": a.affected_entity_name,
+                    "anomaly_score": 0,
+                    "severity": "LOW",
+                    "crime_count": 0,
+                    "fir_count": 0,
+                    "hotspot_score": 0.0,
+                    "contributing_factors": [],
+                }
+            d = district_data[did]
+            d["anomaly_score"] += a.anomaly_score
+            d["contributing_factors"].extend(a.contributing_factors)
+            if {"CRITICAL", "HIGH", "MEDIUM", "LOW"}.index(a.severity) > {"CRITICAL", "HIGH", "MEDIUM", "LOW"}.index(d["severity"]):
+                d["severity"] = a.severity
+
+        data = await self.repo.get_anomaly_data(limit=2000)
+        crimes = data.get("crimes", [])
+        firs_data = data.get("firs", [])
+        for did, d in district_data.items():
+            entity_crimes = [c for c in crimes if c.get("district_id") == did]
+            entity_firs = [f for f in firs_data if f.get("district_id") == did]
+            d["crime_count"] = len(entity_crimes)
+            d["fir_count"] = len(entity_firs)
+            d["hotspot_score"] = round(self._check_hotspot_intensity(entity_crimes), 2)
+
+        return [
+            DistrictAnomaly(
+                district_id=did,
+                district_name=d["district_name"],
+                anomaly_score=round(d["anomaly_score"], 2),
+                severity=d["severity"],
+                crime_count=d["crime_count"],
+                fir_count=d["fir_count"],
+                hotspot_score=d["hotspot_score"],
+                contributing_factors=d["contributing_factors"],
             )
-        return district_anomalies
+            for did, d in district_data.items()
+        ]
 
     async def get_station_anomalies(self, officer: Dict[str, Any]) -> List[StationAnomaly]:
         """Retrieves anomalies for all police stations."""
         
         anomalies = await self.get_anomalies(officer, limit=1000)
-        station_anomalies: List[StationAnomaly] = []
+        station_data: Dict[str, Dict[str, Any]] = {}
+
         for a in anomalies:
             if a.affected_entity_type != "PoliceStation":
                 continue
-            station_anomalies.append(
-                StationAnomaly(
-                    station_id=a.affected_entity_id,
-                    station_name=a.affected_entity_name,
-                    district_id="",
-                    district_name="",
-                    anomaly_score=a.anomaly_score,
-                    severity=a.severity,
-                    crime_count=0,
-                    fir_count=0,
-                    hotspot_score=0.0,
-                    contributing_factors=a.contributing_factors,
-                )
+            sid = a.affected_entity_id
+            did = a.affected_entity_id
+            if sid not in station_data:
+                station_data[sid] = {
+                    "station_name": a.affected_entity_name,
+                    "district_id": "",
+                    "district_name": "",
+                    "anomaly_score": 0,
+                    "severity": "LOW",
+                    "crime_count": 0,
+                    "fir_count": 0,
+                    "hotspot_score": 0.0,
+                    "contributing_factors": [],
+                }
+            s = station_data[sid]
+            s["anomaly_score"] += a.anomaly_score
+            s["contributing_factors"].extend(a.contributing_factors)
+            if {"CRITICAL", "HIGH", "MEDIUM", "LOW"}.index(a.severity) > {"CRITICAL", "HIGH", "MEDIUM", "LOW"}.index(s["severity"]):
+                s["severity"] = a.severity
+
+        data = await self.repo.get_anomaly_data(limit=2000)
+        crimes = data.get("crimes", [])
+        firs_data = data.get("firs", [])
+        for sid, s in station_data.items():
+            entity_crimes = [c for c in crimes if c.get("station_id") == sid]
+            entity_firs = [f for f in firs_data if f.get("station_id") == sid]
+            s["crime_count"] = len(entity_crimes)
+            s["fir_count"] = len(entity_firs)
+            s["hotspot_score"] = round(self._check_hotspot_intensity(entity_crimes), 2)
+
+        return [
+            StationAnomaly(
+                station_id=sid,
+                station_name=s["station_name"],
+                district_id=s["district_id"],
+                district_name=s["district_name"],
+                anomaly_score=round(s["anomaly_score"], 2),
+                severity=s["severity"],
+                crime_count=s["crime_count"],
+                fir_count=s["fir_count"],
+                hotspot_score=s["hotspot_score"],
+                contributing_factors=s["contributing_factors"],
             )
-        return station_anomalies
+            for sid, s in station_data.items()
+        ]
 
     async def get_anomaly(self, officer: Dict[str, Any], anomaly_id: str) -> Optional[Anomaly]:
         """Retrieves a specific anomaly by ID."""
@@ -242,7 +301,7 @@ class AnomalyService:
                 )
             )
 
-        repeat_score = self._check_repeat_offender_activity(criminals, entity_name)
+        repeat_score = self._check_repeat_offender_activity(criminals, entity_id, entity_type)
         if repeat_score > 0:
             anomalies.append(
                 Anomaly(
@@ -312,12 +371,22 @@ class AnomalyService:
         """Checks hotspot intensity."""
         if not crimes:
             return 0.0
-        return min(len(crimes) * 1.5, 100.0)
+        count = len(crimes)
+        if count >= 30:
+            return 60.0
+        if count >= 15:
+            return 40.0
+        if count >= 5:
+            return 20.0
+        return min(count * 3.0, 15.0)
 
-    def _check_repeat_offender_activity(self, criminals: List[Dict[str, Any]], entity_name: str) -> float:
+    def _check_repeat_offender_activity(self, criminals: List[Dict[str, Any]], entity_id: str, entity_type: str) -> float:
         """Checks repeat offender activity."""
         count = 0
         for criminal in criminals:
-            if criminal.get("last_known_location") == entity_name:
+            location = criminal.get("last_known_location", "")
+            if entity_type == "District" and location == entity_id:
                 count += 1
-        return min(count * 5.0, 100.0)
+            elif entity_type == "PoliceStation" and criminal.get("ROWID", "").endswith(entity_id.split("-")[-1]):
+                count += 1
+        return min(count * 3.0, 30.0)

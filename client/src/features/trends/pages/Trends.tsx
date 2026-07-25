@@ -196,7 +196,18 @@ const Trends: React.FC = () => {
     if (comparison === 'district' || comparison === 'category') {
       if (!rawCrimes || rawCrimes.length === 0) return [];
       const groupKey = comparison === 'district' ? 'district_id' : 'crime_type';
-      return aggregateRawCrimes(rawCrimes, timeframe, groupKey);
+      const groupCounts = new Map<string, number>();
+      rawCrimes.forEach((c) => {
+        const g = (c[groupKey] as string) || 'unknown';
+        groupCounts.set(g, (groupCounts.get(g) || 0) + 1);
+      });
+      const topGroups = Array.from(groupCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([key]) => key);
+      const topSet = new Set(topGroups);
+      const filtered = rawCrimes.filter((c) => topSet.has((c[groupKey] as string) || 'unknown'));
+      return aggregateRawCrimes(filtered, timeframe, groupKey);
     }
 
     const currentMap = new Map<string, number>();
@@ -230,15 +241,21 @@ const Trends: React.FC = () => {
         return [{ key: 'value', color: '#3b82f6', label: 'Count' }];
       }
       const groupKey = comparison === 'district' ? 'district_id' : 'crime_type';
-      const groups = new Set<string>();
-      rawCrimes.forEach((c) => groups.add((c[groupKey] as string) || 'unknown'));
-      return Array.from(groups)
-        .sort()
-        .map((key, i) => ({
-          key,
-          color: SERIES_COLORS[i % SERIES_COLORS.length],
-          label: comparison === 'district' ? `District ${key}` : key,
-        }));
+      const groupCounts = new Map<string, number>();
+      rawCrimes.forEach((c) => {
+        const g = (c[groupKey] as string) || 'unknown';
+        groupCounts.set(g, (groupCounts.get(g) || 0) + 1);
+      });
+      const topGroups = Array.from(groupCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([key]) => key)
+        .sort();
+      return topGroups.map((key, i) => ({
+        key,
+        color: SERIES_COLORS[i % SERIES_COLORS.length],
+        label: comparison === 'district' ? `District ${key}` : key,
+      }));
     }
 
     if (comparison === 'previous_period' || comparison === 'previous_year') {

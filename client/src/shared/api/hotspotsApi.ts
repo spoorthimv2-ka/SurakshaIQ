@@ -56,6 +56,6 @@ export const hotspotsApi = {
   getStationHotspots: (filters?: { start_date?: string; end_date?: string }) =>
     apiClient.get<StationHotspot[]>('/hotspots/stations', { params: filters }),
 
-  getTopHotspots: (limit = 10, filters?: { start_date?: string; end_date?: string }) =>
+  getTopHotspots: (limit = 10, filters?: { start_date?: string; end_date?: string; district_id?: string; station_id?: string; crime_type?: string; status?: string }) =>
     apiClient.get<Hotspot[]>('/hotspots/top', { params: { limit, ...filters } }),
 };

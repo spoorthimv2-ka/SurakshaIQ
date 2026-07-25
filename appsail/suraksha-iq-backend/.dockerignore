@@ -7,3 +7,7 @@ __pycache__
 .git
 .gitignore
 .dockerignore
+.API_CONTRACT.md
+.DEMO_CREDENTIALS.md
+.KNOWN_ISSUES.md
+.ROLLBACK.md

@@ -23,6 +23,8 @@ const Alerts: React.FC = () => {
   const [filters, setFilters] = useState({
     severity: '',
     status: '',
+    district_id: '',
+    station_id: '',
   });
   const [selectedAlert, setSelectedAlert] = useState<AlertRecord | null>(null);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
@@ -35,7 +37,12 @@ const Alerts: React.FC = () => {
     offset: 0,
   });
 
-  const { data: activeAlerts, isLoading: activeLoading } = useActiveAlerts(100);
+  const { data: activeAlerts, isLoading: activeLoading } = useActiveAlerts(100, 0, {
+    district_id: filters.district_id || undefined,
+    station_id: filters.station_id || undefined,
+    severity: filters.severity || undefined,
+    status: filters.status || undefined,
+  });
   const { data: summary, isLoading: summaryLoading } = useAlertSummary();
   const acknowledgeMutation = useAcknowledgeAlert();
   const resolveMutation = useResolveAlert();
@@ -132,7 +139,7 @@ const Alerts: React.FC = () => {
   }, [resolveMutation]);
 
   const clearFilters = useCallback(() => {
-    setFilters({ severity: '', status: '' });
+    setFilters({ severity: '', status: '', district_id: '', station_id: '' });
   }, []);
 
   if (alertsError) {
@@ -200,6 +207,26 @@ const Alerts: React.FC = () => {
               <option value="ACKNOWLEDGED">Acknowledged</option>
               <option value="RESOLVED">Resolved</option>
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">District ID</label>
+            <input
+              type="text"
+              value={filters.district_id}
+              onChange={(e) => setFilters((f) => ({ ...f, district_id: e.target.value }))}
+              placeholder="District ID"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Station ID</label>
+            <input
+              type="text"
+              value={filters.station_id}
+              onChange={(e) => setFilters((f) => ({ ...f, station_id: e.target.value }))}
+              placeholder="Station ID"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
           <div className="flex items-end">
             <button

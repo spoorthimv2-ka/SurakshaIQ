@@ -139,7 +139,7 @@ class HotspotService:
             did = d.get("ROWID", d.get("id", ""))
             dname = d.get("name", did)
             crimes = await self.repo.count_by_district(did, date_from=date_from, date_to=date_to)
-            firs = await self.fir_repo.count_by_status("ACTIVE")
+            firs = await self.fir_repo.count_by_district(did, date_from=date_from, date_to=date_to)
 
             score = self._compute_hotspot_score(crimes, None, [])
             trend = self._compute_trend(crimes)
@@ -185,7 +185,7 @@ class HotspotService:
             did = s.get("district_id", "UNKNOWN")
             dname = s.get("district_name", did)
             crimes = await self.repo.count_by_station(sid, date_from=date_from, date_to=date_to)
-            firs = await self.fir_repo.count_by_status("ACTIVE")
+            firs = await self.fir_repo.count_by_station(sid, date_from=date_from, date_to=date_to)
 
             score = self._compute_hotspot_score(crimes, None, [])
             results.append(
@@ -211,9 +211,17 @@ class HotspotService:
         limit: int = 10,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        district_id: Optional[str] = None,
+        station_id: Optional[str] = None,
+        crime_type: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> List[HotspotResponse]:
         return await self.get_hotspots(
             officer,
+            district_id=district_id,
+            station_id=station_id,
+            crime_type=crime_type,
+            status=status,
             start_date=start_date,
             end_date=end_date,
             limit=limit,

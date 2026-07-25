@@ -229,14 +229,14 @@ const PredictiveIntelligence: React.FC = () => {
       {/* Predictive Dashboard KPI Cards */}
       {dashboard && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <KpiCard label="Highest Risk District" value={dashboard.highest_risk_district?.entity_name || 'N/A'} icon={<Shield size={20} />} />
+          <KpiCard label="Highest Risk District" value={dashboard.highest_risk_district?.entity_name || 'Insufficient data for prediction'} icon={<Shield size={20} />} />
           <KpiCard
             label="Fastest Growing Crime"
-            value={dashboard.fastest_growing_crime?.category || 'N/A'}
+            value={dashboard.fastest_growing_crime?.category ? dashboard.fastest_growing_crime.category : 'Insufficient data for prediction'}
             delta={dashboard.fastest_growing_crime?.change_percent}
             icon={<TrendingUp size={20} />}
           />
-          <KpiCard label="Emerging Hotspot" value={dashboard.emerging_hotspot?.district_name || 'N/A'} icon={<MapPin size={20} />} />
+          <KpiCard label="Emerging Hotspot" value={dashboard.emerging_hotspot?.district_name ? dashboard.emerging_hotspot.district_name : 'Insufficient data for prediction'} icon={<MapPin size={20} />} />
           <KpiCard label="Forecast Confidence" value={`${(dashboard.forecast_confidence * 100).toFixed(0)}%`} icon={<Activity size={20} />} />
           <KpiCard label="Patrol Increase" value={`+${dashboard.recommended_patrol_increase}`} delta={dashboard.recommended_patrol_increase} icon={<Target size={20} />} />
           <KpiCard label="Predicted Incidents" value={dashboard.predicted_incident_count.toLocaleString()} icon={<Clock size={20} />} />

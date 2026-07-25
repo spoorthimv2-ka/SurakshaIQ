@@ -105,17 +105,17 @@ function getEdgePath(
 }
 
 const SIMULATION_CONFIG = {
-  chargeStrength: -600,
-  chargeDistanceMax: 600,
-  linkDistanceBase: 140,
-  linkDistanceOffender: 110,
-  linkDistanceOther: 170,
-  linkStrength: 0.45,
-  collidePadding: 10,
-  xStrength: 0.12,
-  yStrength: 0.12,
-  alphaDecay: 0.018,
-  velocityDecay: 0.28,
+  chargeStrength: -1200,
+  chargeDistanceMax: 800,
+  linkDistanceBase: 200,
+  linkDistanceOffender: 160,
+  linkDistanceOther: 240,
+  linkStrength: 0.35,
+  collidePadding: 16,
+  xStrength: 0.08,
+  yStrength: 0.08,
+  alphaDecay: 0.012,
+  velocityDecay: 0.22,
   minZoom: 0.08,
   maxZoom: 10,
 };
@@ -459,6 +459,17 @@ const NetworkGraphView: React.FC<NetworkGraphViewProps> = ({
       linkRef.current?.attr('d', (d) => getEdgePath(d, pairTotal));
       nodeRef.current?.attr('cx', (d) => d.x ?? 0).attr('cy', (d) => d.y ?? 0);
       labelRef.current?.attr('x', (d) => (d.x ?? 0) + 15).attr('y', (d) => (d.y ?? 0) + 4.5);
+    });
+
+    simulation.on('end', () => {
+      const bounds = g.node()?.getBBox();
+      if (bounds && bounds.width > 0 && bounds.height > 0) {
+        const midX = bounds.x + bounds.width / 2;
+        const midY = bounds.y + bounds.height / 2;
+        const scale = 0.82 / Math.max(bounds.width / w, bounds.height / h);
+        const transform = d3.zoomIdentity.translate(w / 2 - midX * scale, h / 2 - midY * scale).scale(scale);
+        svg.transition().duration(750).call(zoomBehavior.transform, transform);
+      }
     });
 
     const gBounds = g.node()?.getBBox();

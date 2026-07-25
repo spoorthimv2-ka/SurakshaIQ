@@ -15,10 +15,10 @@ export function useAlertSummary() {
   });
 }
 
-export function useActiveAlerts(limit = 100, offset = 0) {
+export function useActiveAlerts(limit = 100, offset = 0, filters?: { district_id?: string; station_id?: string; severity?: string; status?: string }) {
   return useQuery({
-    queryKey: ['alerts', 'active', limit, offset],
-    queryFn: () => alertsApi.getActive(limit, offset).then((res) => res.data),
+    queryKey: ['alerts', 'active', limit, offset, filters],
+    queryFn: () => alertsApi.getActive(limit, offset, filters).then((res) => res.data),
   });
 }
 

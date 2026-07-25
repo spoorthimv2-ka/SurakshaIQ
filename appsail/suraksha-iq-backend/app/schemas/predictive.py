@@ -143,9 +143,9 @@ class ScenarioSimulation(BaseModel):
 
 
 class PredictiveDashboard(BaseModel):
-    highest_risk_district: Dict[str, Any]
-    fastest_growing_crime: Dict[str, Any]
-    emerging_hotspot: Dict[str, Any]
+    highest_risk_district: Optional[Dict[str, Any]] = None
+    fastest_growing_crime: Optional[Dict[str, Any]] = None
+    emerging_hotspot: Optional[Dict[str, Any]] = None
     forecast_confidence: float
     recommended_patrol_increase: int
     predicted_incident_count: int

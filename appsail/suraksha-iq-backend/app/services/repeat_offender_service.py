@@ -154,8 +154,26 @@ class RepeatOffenderService:
             crime_ids = [link.get("crime_id") for link in links if link.get("crime_id")]
             crimes = []
             if crime_ids:
-                crimes = await self.crime_repo.find_all_with_filters(limit=1000)
-                crimes = [c for c in crimes if c.get("ROWID") in crime_ids]
+                all_crimes = await self.crime_repo.find_all_with_filters(
+                    district_id=district_id,
+                    station_id=station_id,
+                    crime_type=crime_type,
+                    date_from=date_from,
+                    date_to=date_to,
+                    limit=1000,
+                )
+                crimes = [c for c in all_crimes if c.get("ROWID") in crime_ids]
+            else:
+                crimes = await self.crime_repo.find_all_with_filters(
+                    district_id=district_id,
+                    station_id=station_id,
+                    crime_type=crime_type,
+                    date_from=date_from,
+                    date_to=date_to,
+                    limit=1000,
+                )
+            if not crimes:
+                continue
 
             districts = list({c.get("district_id", "UNKNOWN") for c in crimes})
             stations = list({c.get("station_id", "UNKNOWN") for c in crimes})

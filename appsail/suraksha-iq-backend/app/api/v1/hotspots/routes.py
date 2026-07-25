@@ -117,12 +117,16 @@ async def get_top_hotspots(
     limit: int = Query(10, ge=1, le=100),
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
+    district_id: Optional[str] = Query(None, description="Filter by district ID"),
+    station_id: Optional[str] = Query(None, description="Filter by police station ID"),
+    crime_type: Optional[str] = Query(None, description="Filter by crime type"),
+    status: Optional[str] = Query(None, description="Filter by status"),
     current_user: Dict[str, Any] = Depends(get_current_officer),
 ):
     """Retrieves top hotspots from Catalyst Data Store."""
     try:
         service = HotspotService(request)
-        hotspots = await service.get_top_hotspots(current_user, limit=limit, start_date=start_date, end_date=end_date)
+        hotspots = await service.get_top_hotspots(current_user, limit=limit, start_date=start_date, end_date=end_date, district_id=district_id, station_id=station_id, crime_type=crime_type, status=status)
         return hotspots
     except HTTPException:
         raise

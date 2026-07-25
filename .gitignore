@@ -58,3 +58,7 @@ docs/
 node_modules/
 docs/
 documents/
+KNOWN_ISSUE.md
+DEMO_CREDENTIALS.md
+API_CONTRACT.md
+ROLLBACK.md

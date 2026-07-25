@@ -1,16 +1,13 @@
 from typing import List, Optional, Any
 from neo4j import AsyncSession
 from app.schemas.offender import OffenderSummary
+from app.core.logger import logger
 
 class OffenderGraphRepository:
     def __init__(self, session: Optional[AsyncSession]):
         self.session = session
 
     def _classify_risk(self, count: int) -> str:
-        """
-        Calculates a placeholder risk score based on the number of offenses.
-        TODO: Align this logic with explicit PRD/TRD thresholds once available.
-        """
         if count >= 3:
             return "HIGH"
         elif count == 2:
@@ -70,8 +67,7 @@ class OffenderGraphRepository:
 
             return offenders, total_count
         except Exception as e:
-            # If the database is completely empty or schema doesn't exist, it might error.
-            print(f"Error querying Neo4j for offenders: {e}")
+            logger.warning(f"Error querying Neo4j for offenders: {e}")
             return [], 0
 
     async def get_offender_by_id(self, offender_id: str) -> Optional[OffenderSummary]:
@@ -100,7 +96,7 @@ class OffenderGraphRepository:
                 last_known_location=rec.get("location")
             )
         except Exception as e:
-            print(f"Error querying Neo4j for offender by id: {e}")
+            logger.warning(f"Error querying Neo4j for offender by id: {e}")
             return None
 
     async def get_offender_network(self, offender_id: str) -> dict:
@@ -161,5 +157,5 @@ class OffenderGraphRepository:
                 "links": unique_links
             }
         except Exception as e:
-            print(f"Error retrieving offender network: {e}")
+            logger.warning(f"Error retrieving offender network: {e}")
             return {"nodes": [], "links": []}
