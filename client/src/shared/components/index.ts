@@ -12,6 +12,7 @@ export type { DataTableColumn } from './DataTable';
 export { default as KpiCard } from './KpiCard';
 export { default as StatDelta } from './StatDelta';
 export { default as FilterBar } from './FilterBar';
+export { default as Textarea } from './Textarea';
 export { default as MapCanvas } from './MapCanvas';
 export type { MapMarker, ChoroplethRegion } from './MapCanvas';
 export { default as MiniMap } from './MiniMap';
@@ -34,3 +35,6 @@ export { default as ResourceRecommendations } from './resource-recommendations/R
 export { default as EmergingAlerts } from './emerging-alerts/EmergingAlerts';
 export { default as QuickActions } from './quick-actions/QuickActions';
 export { default as AIAssistant } from './ai-assistant/AIAssistant';
+export { default as AITransparency } from './ai-transparency/AITransparency';
+export { default as ExplainButton } from './explain-button/ExplainButton';
+export { default as AIPanel } from './ai-panel/AIPanel';

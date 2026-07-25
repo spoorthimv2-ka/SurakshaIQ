@@ -1,4 +1,9 @@
 import { apiClient } from './api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+// ============================================================
+// Request / Response types
+// ============================================================
 
 export interface AISummaryRequest {
   metrics: {
@@ -12,6 +17,9 @@ export interface AISummaryRequest {
   hotspots: Array<{ location: string; riskLevel: string; change: number }>;
   anomalies?: Array<{ title: string; severity: string }>;
   networks?: Array<{ id: string; type: string }>;
+  filters?: Record<string, unknown>;
+  intelligence_scope?: Record<string, unknown>;
+  dashboard_payload?: Record<string, unknown>;
 }
 
 export interface AISummaryResponse {
@@ -22,12 +30,16 @@ export interface AISummaryResponse {
   confidence: number;
   generatedAt: string;
   isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
 }
 
 export interface AIReportRequest {
   title: string;
   scope: Record<string, unknown>;
   filters: Record<string, unknown>;
+  report_type?: string;
+  analytics?: Record<string, unknown>;
 }
 
 export interface AIReportResponse {
@@ -36,9 +48,130 @@ export interface AIReportResponse {
   content: string;
   format: 'text' | 'pdf' | 'json';
   generatedAt: string;
+  isFallback?: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+  confidence?: number;
+  sections?: Array<{ title: string; content: string }>;
 }
 
-class AIService {
+export interface AIChatRequest {
+  message: string;
+  context?: Record<string, unknown>;
+}
+
+export interface AIChatResponse {
+  response: string;
+  confidence: number;
+  analyticsUsed: string[];
+  isFallback: boolean;
+  model?: string | null;
+  generatedAt: string;
+}
+
+export interface AIFirIntelligenceRequest {
+  fir_number?: string;
+  description: string;
+  sections?: string;
+  victim_name?: string;
+  suspect_name?: string;
+  district_id?: string;
+  station_id?: string;
+  status?: string;
+  title?: string;
+}
+
+export interface AIFirIntelligenceResponse {
+  crime_category: string;
+  severity: string;
+  modus_operandi: string;
+  entities: Record<string, string[]>;
+  investigation_suggestions: string[];
+  confidence: number;
+  generatedAt: string;
+  isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+}
+
+export interface AIPatternRequest {
+  analytics: Record<string, unknown>;
+}
+
+export interface AIPatternResponse {
+  patterns: Array<Record<string, unknown>>;
+  correlations: Array<Record<string, unknown>>;
+  confidence: number;
+  generatedAt: string;
+  isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+}
+
+export interface AIRecommendationRequest {
+  analytics: Record<string, unknown>;
+}
+
+export interface AIRecommendationResponse {
+  recommendations: Array<{ title: string; description: string; priority: string; category: string }>;
+  overall_risk: string;
+  confidence: number;
+  generatedAt: string;
+  isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+}
+
+export interface AIExplainRequest {
+  chart_type: string;
+  data: Record<string, unknown>;
+  filters: Record<string, unknown>;
+}
+
+export interface AIExplainResponse {
+  explanation: string;
+  confidence: number;
+  generatedAt: string;
+  isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+}
+
+export interface AIEvidenceSummaryRequest {
+  document_type: string;
+  content: string;
+}
+
+export interface AIEvidenceSummaryResponse {
+  summary: string;
+  extracted_entities: Record<string, string[]>;
+  key_points: string[];
+  confidence: number;
+  generatedAt: string;
+  isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+}
+
+export interface AITimelineRequest {
+  incident_description: string;
+}
+
+export interface AITimelineResponse {
+  events: Array<Record<string, unknown>>;
+  narrative: string;
+  confidence: number;
+  generatedAt: string;
+  isFallback: boolean;
+  analyticsUsed?: string[];
+  model?: string | null;
+}
+
+// ============================================================
+// Legacy service class (kept for backward compatibility)
+// ============================================================
+
+class AIServiceLegacy {
   private basePath = '/ai';
 
   async generateSummary(payload: AISummaryRequest): Promise<AISummaryResponse> {
@@ -51,9 +184,9 @@ class AIService {
     }
   }
 
-  async generateRecommendations(payload: Partial<AISummaryRequest>): Promise<AISummaryResponse['recommendedActions']> {
+  async generateRecommendations(payload: Partial<AISummaryRequest>): Promise<string[]> {
     try {
-      const { data } = await apiClient.post<AISummaryResponse['recommendedActions']>(`${this.basePath}/recommendations`, payload);
+      const { data } = await apiClient.post<string[]>(`${this.basePath}/recommendations`, payload);
       return data;
     } catch (error) {
       console.warn('[AI Service] Recommendations failed, using fallback', error);
@@ -140,5 +273,76 @@ class AIService {
   }
 }
 
-export const aiService = new AIService();
+export const aiService = new AIServiceLegacy();
 export default aiService;
+
+// ============================================================
+// React Query hooks
+// ============================================================
+
+export function useAiSummary() {
+  return useMutation({
+    mutationFn: (payload: AISummaryRequest) =>
+      apiClient.post<AISummaryResponse>('/ai/summary', payload).then((res) => res.data),
+  });
+}
+
+export function useAiChat() {
+  return useMutation({
+    mutationFn: (payload: AIChatRequest) =>
+      apiClient.post<AIChatResponse>('/ai/chat', payload).then((res) => res.data),
+  });
+}
+
+export function useAiFirIntelligence() {
+  return useMutation({
+    mutationFn: (payload: AIFirIntelligenceRequest) =>
+      apiClient.post<AIFirIntelligenceResponse>('/ai/fir-intelligence', payload).then((res) => res.data),
+  });
+}
+
+export function useAiPatterns() {
+  return useMutation({
+    mutationFn: (payload: AIPatternRequest) =>
+      apiClient.post<AIPatternResponse>('/ai/patterns', payload).then((res) => res.data),
+  });
+}
+
+export function useAiRecommendations() {
+  return useMutation({
+    mutationFn: (payload: AIRecommendationRequest) =>
+      apiClient.post<AIRecommendationResponse>('/ai/recommendations', payload).then((res) => res.data),
+  });
+}
+
+export function useAiReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AIReportRequest) =>
+      apiClient.post<AIReportResponse>('/ai/report', payload).then((res) => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai'] });
+    },
+  });
+}
+
+export function useAiExplain() {
+  return useMutation({
+    mutationFn: (payload: AIExplainRequest) =>
+      apiClient.post<AIExplainResponse>('/ai/explain', payload).then((res) => res.data),
+  });
+}
+
+export function useAiEvidenceSummary() {
+  return useMutation({
+    mutationFn: (payload: AIEvidenceSummaryRequest) =>
+      apiClient.post<AIEvidenceSummaryResponse>('/ai/evidence-summary', payload).then((res) => res.data),
+  });
+}
+
+export function useAiTimeline() {
+  return useMutation({
+    mutationFn: (payload: AITimelineRequest) =>
+      apiClient.post<AITimelineResponse>('/ai/timeline', payload).then((res) => res.data),
+  });
+}

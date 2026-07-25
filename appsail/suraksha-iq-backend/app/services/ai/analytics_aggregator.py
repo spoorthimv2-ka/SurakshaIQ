@@ -20,9 +20,9 @@ def aggregate_dashboard_analytics(
     alerts: Optional[List[Dict[str, Any]]] = None,
     risk_scores: Optional[List[Dict[str, Any]]] = None,
     recent_incidents: Optional[List[Dict[str, Any]]] = None,
+    anomalies: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Normalize dashboard intelligence into a single analytics payload."""
-
     payload: Dict[str, Any] = {
         "intelligence_scope": _safe(intelligence_scope),
         "kpi_metrics": _safe(kpi_metrics) or {},
@@ -35,9 +35,9 @@ def aggregate_dashboard_analytics(
         "alerts": _safe(alerts) or [],
         "risk_scores": _safe(risk_scores) or [],
         "recent_incidents": _safe(recent_incidents) or [],
+        "anomalies": _safe(anomalies) or [],
     }
 
-    # basic sanitization for prompt consumption
     payload["kpi_metrics"] = _numbers_only(payload["kpi_metrics"])
     return payload
 

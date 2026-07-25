@@ -8,8 +8,20 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '5xl' | '6xl' | 'full';
 }
+
+const sizeClasses = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
+  '3xl': 'max-w-3xl',
+  '5xl': 'max-w-5xl',
+  '6xl': 'max-w-6xl',
+  full: 'max-w-[95vw]',
+};
 
 const Modal: React.FC<ModalProps> = ({
   isOpen,
@@ -21,15 +33,9 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className={clsx('bg-white rounded-lg shadow-xl', sizeClasses[size])}>
+      <div className={clsx('w-full bg-white rounded-lg shadow-xl', sizeClasses[size])}>
         {title && (
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
             <h2 className="text-lg font-semibold">{title}</h2>

@@ -21,7 +21,19 @@ export type { Anomaly, DistrictAnomaly, StationAnomaly, AnomalySummary, AnomalyF
 export { repeatOffendersApi } from './repeatOffendersApi';
 export type { RepeatOffender, RepeatOffenderDetail, RepeatOffenderStatistics, RepeatOffenderFilters } from './repeatOffendersApi';
 export { networkApi } from './networkApi';
-export type { NetworkNode, NetworkEdge, NetworkStatistics, NetworkGraphResponse, NetworkSearchResponse } from './networkApi';
+export type {
+  NetworkNode,
+  NetworkEdge,
+  NetworkStatistics,
+  NetworkGraphResponse,
+  NetworkSearchResponse,
+  NetworkFilters,
+  AdvancedGraphResponse,
+  NetworkAnalyticsResponse,
+  NetworkTimelineResponse,
+  CommunityDetectionResponse,
+  CentralActorResponse,
+} from './networkApi';
 export { riskScoringApi } from './riskScoringApi';
 export type { RiskFactor, RiskPrediction, DistrictRisk, StationRisk, RiskSummary } from './riskScoringApi';
 export { alertsApi } from './alertsApi';

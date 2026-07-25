@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, DataTable, KpiCard, LoadingSkeleton, EmptyState, AlertBanner, Badge, Modal } from 'shared/components';
+import { Card, DataTable, KpiCard, LoadingSkeleton, EmptyState, AlertBanner } from 'shared/components';
 import type { DataTableColumn } from 'shared/components';
 import { districtsApi } from 'shared/api';
 import { useRepeatOffenders, useTopRepeatOffenders, useRepeatOffenderStatistics } from 'features/repeat-offenders/hooks/useRepeatOffenders';
-import type { RepeatOffender, RepeatOffenderDetail } from 'features/repeat-offenders/hooks/useRepeatOffenders';
+import type { RepeatOffender } from 'features/repeat-offenders/hooks/useRepeatOffenders';
+import OffenderIntelligenceWorkspace from '../components/OffenderIntelligenceWorkspace';
 
 const RepeatOffenders: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -17,8 +18,6 @@ const RepeatOffenders: React.FC = () => {
   const [districts, setDistricts] = useState<{ id: string; name: string }[]>([]);
   const [districtsLoading, setDistrictsLoading] = useState(true);
   const [selectedOffender, setSelectedOffender] = useState<RepeatOffender | null>(null);
-  const [offenderDetail, setOffenderDetail] = useState<RepeatOffenderDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
 
   const { data: offenders, isLoading: offendersLoading, error: offendersError } = useRepeatOffenders({
     ...(filters.district_id ? { district_id: filters.district_id } : {}),
@@ -53,20 +52,6 @@ const RepeatOffenders: React.FC = () => {
     return (id: string) => map.get(id) ?? id;
   }, [districts]);
 
-  const handleViewDetails = async (offender: RepeatOffender) => {
-    setSelectedOffender(offender);
-    setDetailLoading(true);
-    setOffenderDetail(null);
-    try {
-      const res = await import('shared/api').then((m) => m.repeatOffendersApi.getById(offender.offender_id));
-      setOffenderDetail(res.data);
-    } catch {
-      // silent
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
   const columns: DataTableColumn<RepeatOffender>[] = [
     { key: 'offender_name', header: 'Name', render: (r) => r.offender_name },
     { key: 'total_offences', header: 'Offences', sortable: true, sortValue: (r) => r.total_offences, render: (r) => r.total_offences },
@@ -91,15 +76,15 @@ const RepeatOffenders: React.FC = () => {
     {
       key: 'actions',
       header: 'Actions',
-      render: (r) => (
-        <button
-          type="button"
-          onClick={() => handleViewDetails(r)}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          View Details
-        </button>
-      ),
+        render: (r) => (
+          <button
+            type="button"
+            onClick={() => setSelectedOffender(r)}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            View Details
+          </button>
+        ),
     },
   ];
 
@@ -304,113 +289,15 @@ const RepeatOffenders: React.FC = () => {
         )}
       </Card>
 
-      {/* Details Modal */}
-      <Modal
-        isOpen={!!selectedOffender}
-        onClose={() => { setSelectedOffender(null); setOffenderDetail(null); }}
-        title={selectedOffender ? `Offender Details — ${selectedOffender.offender_name}` : 'Offender Details'}
-        footer={
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => { setSelectedOffender(null); setOffenderDetail(null); }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Close
-            </button>
-          </div>
-        }
-      >
-        {detailLoading ? (
-          <LoadingSkeleton variant="table" rows={3} />
-        ) : offenderDetail ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm font-medium text-gray-700">Offender ID</span>
-                <p className="text-sm text-gray-900">{offenderDetail.offender_id}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Name</span>
-                <p className="text-sm text-gray-900">{offenderDetail.offender_name}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Alias</span>
-                <p className="text-sm text-gray-900">{offenderDetail.alias || '-'}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Age</span>
-                <p className="text-sm text-gray-900">{offenderDetail.age || '-'}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Risk Level</span>
-                <p className="text-sm text-gray-900">{offenderDetail.risk_level}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Status</span>
-                <p className="text-sm text-gray-900">{offenderDetail.status}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Last Known Location</span>
-                <p className="text-sm text-gray-900">{offenderDetail.last_known_location || '-'}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Total Offences</span>
-                <p className="text-sm text-gray-900">{offenderDetail.total_offences}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">FIR Count</span>
-                <p className="text-sm text-gray-900">{offenderDetail.fir_count}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Repeat Offender Score</span>
-                <p className="text-sm text-gray-900">{offenderDetail.repeat_offender_score.toFixed(2)}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Districts Involved</span>
-                <p className="text-sm text-gray-900">{offenderDetail.districts_involved.map((d) => districtName(d)).join(', ') || '-'}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">Police Stations Involved</span>
-                <p className="text-sm text-gray-900">{offenderDetail.police_stations_involved.join(', ') || '-'}</p>
-              </div>
-            </div>
-
-            <div>
-              <span className="text-sm font-medium text-gray-700">Crime Categories</span>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {offenderDetail.crime_categories.map((cat) => (
-                  <Badge key={cat} variant="secondary">{cat}</Badge>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <span className="mb-2 block text-sm font-medium text-gray-700">Offence Timeline</span>
-              {offenderDetail.offence_timeline.length > 0 ? (
-                <DataTable
-                  columns={[
-                    { key: 'crime_type', header: 'Type', render: (r) => r.crime_type },
-                    { key: 'district_id', header: 'District', render: (r) => districtName(r.district_id) },
-                    { key: 'station_id', header: 'Station', render: (r) => r.station_id },
-                    { key: 'offence_date', header: 'Date', render: (r) => new Date(r.offence_date).toLocaleDateString() },
-                    { key: 'fir_number', header: 'FIR', render: (r) => r.fir_number || '-' },
-                  ]}
-                  data={offenderDetail.offence_timeline}
-                  rowKey={(r) => r.crime_id}
-                  virtualized={false}
-                />
-              ) : (
-                <EmptyState title="No timeline data" description="Offence timeline will appear here." />
-              )}
-            </div>
-          </div>
-        ) : (
-          <EmptyState title="No details found" description="Offender details could not be loaded." />
+{/* Offender Intelligence Workspace */}
+        {selectedOffender && (
+          <OffenderIntelligenceWorkspace
+            offender={selectedOffender}
+            onClose={() => setSelectedOffender(null)}
+          />
         )}
-      </Modal>
-    </div>
-  );
-};
+     </div>
+   );
+ };
 
 export default RepeatOffenders;

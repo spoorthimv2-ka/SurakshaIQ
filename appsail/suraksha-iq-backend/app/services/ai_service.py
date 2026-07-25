@@ -5,11 +5,12 @@ Orchestrates:
 - Analytics aggregation
 - Prompt construction
 - Catalyst AI completion
-- Fallback local briefing generation
+- Fallback local intelligence generation
 - Caching/policy decisions
 """
 
 from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
 
 from app.config.settings import settings
 from app.core.catalyst import catalyst_manager
@@ -18,20 +19,43 @@ from app.core.logger import logger
 from app.repositories.base_repository import BaseCatalystRepository
 from app.services.ai.analytics_aggregator import aggregate_dashboard_analytics
 from app.services.ai.catalyst_ai_client import CatalystAIClient
-from app.services.ai.fallback_executive_intelligence import generate_local_briefing
-from app.services.ai.prompt_builder import build_executive_prompt
+from app.services.ai.fallback_executive_intelligence import (
+    generate_local_briefing,
+    generate_local_chat_response,
+    generate_local_fir_intelligence,
+    generate_local_recommendations,
+    generate_local_intelligence_report,
+    generate_local_explanation,
+    generate_local_evidence_summary,
+    generate_local_timeline,
+    generate_local_patterns,
+)
+from app.services.ai.prompt_builder import (
+    build_executive_prompt,
+    build_chat_prompt,
+    build_fir_intelligence_prompt,
+    build_pattern_discovery_prompt,
+    build_recommendation_prompt,
+    build_report_prompt,
+    build_explain_prompt,
+    build_evidence_summary_prompt,
+    build_timeline_prompt,
+)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class ExecutiveIntelligenceService(BaseCatalystRepository):
-    """AI-enabled executive intelligence service.
-
-    Future AI methods (analyzeFIR, generateRecommendations, answerQuestion,
-    generateIntelligenceReport, predictEmergingThreats) can be added here
-    without architectural changes.
-    """
+    """AI-enabled operational intelligence service."""
 
     def __init__(self, request: Any):
         super().__init__(request, table_name="Search")
+
+    @staticmethod
+    def _is_ai_available() -> bool:
+        return CatalystAIClient.is_configured() and settings.ai_fallback_enabled is not False
 
     async def generate_executive_summary(
         self,
@@ -41,7 +65,7 @@ class ExecutiveIntelligenceService(BaseCatalystRepository):
         dashboard_payload: Optional[Dict[str, Any]] = None,
         force_refresh: bool = False,
     ) -> Dict[str, Any]:
-        """Generate or retrieve a cached executive intelligence briefing."""
+        """Generate or retrieve a cached operational police briefing."""
         slug = self._build_slug(filters, intelligence_scope)
 
         if not force_refresh:
@@ -64,7 +88,10 @@ class ExecutiveIntelligenceService(BaseCatalystRepository):
             recent_incidents=(dashboard_payload or {}).get("recent_incidents"),
         )
 
-        if not CatalystAIClient.is_configured() or not settings.ai_fallback_enabled:
+        ai_used = False
+        confidence = 0.75
+
+        if not CatalystAIClient.is_configured():
             logger.warning("Catalyst AI unavailable. Using local fallback.")
             result = generate_local_briefing(analytics)
             self._write_cache(slug, result)
@@ -74,32 +101,211 @@ class ExecutiveIntelligenceService(BaseCatalystRepository):
             ai_client = CatalystAIClient(self.request)
             messages = build_executive_prompt(analytics)
             completion = await ai_client.generate_completion(
-                response_format={"type": "json_object"}
+                messages=messages,
+                response_format={"type": "json_object"},
             )
             parsed = _parse_completion(completion.get("content", "{}"))
             parsed["generatedAt"] = _now_iso()
             parsed["isFallback"] = False
+            parsed["analyticsUsed"] = _derive_analytics_used(parsed)
+            if "confidence" in parsed:
+                try:
+                    confidence = float(parsed["confidence"])
+                    confidence = max(0.0, min(1.0, confidence))
+                except (TypeError, ValueError):
+                    pass
+            parsed["confidence"] = confidence
+            parsed["model"] = completion.get("model")
             self._write_cache(slug, parsed)
             return parsed
         except RepositoryError as e:
             logger.error(f"AI generation failed: {e}. Falling back to local briefing.")
             result = generate_local_briefing(analytics)
+            self._write_cache(slug, result)
             return result
 
     async def analyze_fir(self, fir_payload: Dict[str, Any]) -> Dict[str, Any]:
-        raise NotImplementedError("analyze_fir is planned for a future phase.")
+        """Analyze an FIR record and extract structured intelligence."""
+        messages = build_fir_intelligence_prompt(fir_payload)
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=settings.ai_temperature,
+            max_tokens=settings.ai_max_tokens,
+            response_format={"type": "json_object"},
+        )
+        parsed = _parse_completion(completion.get("content", "{}"))
+        parsed["generatedAt"] = _now_iso()
+        parsed["isFallback"] = False
+        parsed["analyticsUsed"] = ["fir_payload"]
+        parsed["model"] = completion.get("model")
+        return parsed
 
     async def generate_recommendations(self, dashboard_payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-        raise NotImplementedError("generate_recommendations is planned for a future phase.")
+        """Generate operational recommendations from dashboard analytics."""
+        analytics = aggregate_dashboard_analytics(
+            kpi_metrics=dashboard_payload.get("kpi_metrics"),
+            crime_trends=dashboard_payload.get("crime_trends"),
+            hotspots=dashboard_payload.get("hotspots"),
+            district_stats=dashboard_payload.get("district_stats"),
+            network_summary=dashboard_payload.get("network_summary"),
+            repeat_offender_stats=dashboard_payload.get("repeat_offender_stats"),
+            alerts=dashboard_payload.get("alerts"),
+            risk_scores=dashboard_payload.get("risk_scores"),
+            recent_incidents=dashboard_payload.get("recent_incidents"),
+        )
+
+        if not CatalystAIClient.is_configured():
+            result = generate_local_recommendations(analytics)
+            return result.get("recommendations", [])
+
+        messages = build_recommendation_prompt(analytics)
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=settings.ai_temperature,
+            max_tokens=settings.ai_max_tokens,
+            response_format={"type": "json_object"},
+        )
+        parsed = _parse_completion(completion.get("content", "{}"))
+        if "confidence" not in parsed:
+            parsed["confidence"] = 0.75
+        parsed["generatedAt"] = _now_iso()
+        parsed["isFallback"] = False
+        parsed["analyticsUsed"] = _derive_analytics_used_recommendations(parsed)
+        parsed["model"] = completion.get("model")
+        return parsed
 
     async def answer_question(self, question: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        raise NotImplementedError("answer_question is planned for a future phase.")
+        """Answer a conversational question from dashboard analytics."""
+        analytics = context.get("analytics", {}) if context else {}
+        messages = build_chat_prompt(question, analytics)
+
+        if not CatalystAIClient.is_configured():
+            result = generate_local_chat_response(question, analytics)
+            return result
+
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=0.3,
+            max_tokens=500,
+        )
+        result = {
+            "response": completion.get("content", ""),
+            "confidence": 0.8,
+            "analyticsUsed": _derive_analytics_used(question, analytics),
+            "isFallback": False,
+            "model": completion.get("model"),
+            "generatedAt": _now_iso(),
+        }
+        return result
 
     async def generate_intelligence_report(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        raise NotImplementedError("generate_intelligence_report is planned for a future phase.")
+        """Generate a structured intelligence report."""
+        if not CatalystAIClient.is_configured():
+            result = generate_local_intelligence_report(payload)
+            return result
+
+        messages = build_report_prompt(payload)
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=settings.ai_temperature,
+            max_tokens=settings.ai_max_tokens,
+            response_format={"type": "json_object"},
+        )
+        parsed = _parse_completion(completion.get("content", "{}"))
+        parsed.setdefault("reportId", f"RPT-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
+        parsed.setdefault("format", "text")
+        parsed.setdefault("generatedAt", _now_iso())
+        parsed["isFallback"] = False
+        parsed["analyticsUsed"] = ["dashboard_analytics"]
+        parsed["model"] = completion.get("model")
+        if "confidence" not in parsed:
+            parsed["confidence"] = 0.75
+        return parsed
 
     async def predict_emerging_threats(self, dashboard_payload: Dict[str, Any]) -> Dict[str, Any]:
-        raise NotImplementedError("predict_emerging_threats is planned for a future phase.")
+        """Detect hidden crime patterns and correlations."""
+        analytics = aggregate_dashboard_analytics(
+            kpi_metrics=dashboard_payload.get("kpi_metrics"),
+            crime_trends=dashboard_payload.get("crime_trends"),
+            hotspots=dashboard_payload.get("hotspots"),
+            district_stats=dashboard_payload.get("district_stats"),
+            crime_category_distribution=dashboard_payload.get("crime_category_distribution"),
+            network_summary=dashboard_payload.get("network_summary"),
+            repeat_offender_stats=dashboard_payload.get("repeat_offender_stats"),
+            alerts=dashboard_payload.get("alerts"),
+            risk_scores=dashboard_payload.get("risk_scores"),
+        )
+
+        if not CatalystAIClient.is_configured():
+            result = generate_local_patterns(analytics)
+            return result
+
+        messages = build_pattern_discovery_prompt(analytics)
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=settings.ai_temperature,
+            max_tokens=settings.ai_max_tokens,
+            response_format={"type": "json_object"},
+        )
+        parsed = _parse_completion(completion.get("content", "{}"))
+        parsed.setdefault("generatedAt", _now_iso())
+        parsed["isFallback"] = False
+        parsed["analyticsUsed"] = [
+            "hotspots",
+            "crime_trends",
+            "district_statistics",
+            "alerts",
+            "network_analysis_summary",
+            "repeat_offender_statistics",
+            "risk_scores",
+        ]
+        parsed["model"] = completion.get("model")
+        if "confidence" not in parsed:
+            parsed["confidence"] = 0.7
+        return parsed
+
+    async def _evidence_summary(self, document_type: str, content: str) -> Dict[str, Any]:
+        """Summarize evidence documents."""
+        messages = build_evidence_summary_prompt(document_type, content)
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=0.3,
+            max_tokens=800,
+            response_format={"type": "json_object"},
+        )
+        parsed = _parse_completion(completion.get("content", "{}"))
+        parsed.setdefault("generatedAt", _now_iso())
+        parsed["isFallback"] = False
+        parsed["analyticsUsed"] = [document_type]
+        parsed["model"] = completion.get("model")
+        if "confidence" not in parsed:
+            parsed["confidence"] = 0.7
+        return parsed
+
+    async def _generate_timeline(self, incident_description: str) -> Dict[str, Any]:
+        """Generate chronological investigative timeline."""
+        messages = build_timeline_prompt(incident_description)
+        ai_client = CatalystAIClient(self.request)
+        completion = await ai_client.generate_completion(
+            messages=messages,
+            temperature=0.2,
+            max_tokens=800,
+            response_format={"type": "json_object"},
+        )
+        parsed = _parse_completion(completion.get("content", "{}"))
+        parsed.setdefault("generatedAt", _now_iso())
+        parsed["isFallback"] = False
+        parsed["analyticsUsed"] = ["incident_description"]
+        parsed["model"] = completion.get("model")
+        if "confidence" not in parsed:
+            parsed["confidence"] = 0.65
+        return parsed
 
     # ------------------------------------------------------------------
     # Simple caching on the datastore-backed Search table.
@@ -157,6 +363,9 @@ def _parse_completion(content: str) -> Dict[str, Any]:
         }
 
 
-def _now_iso() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).isoformat()
+def _derive_analytics_used(parsed: Dict[str, Any]) -> List[str]:
+    return parsed.get("analyticsUsed", ["dashboard_analytics"])
+
+
+def _derive_analytics_used_recommendations(parsed: Dict[str, Any]) -> List[str]:
+    return parsed.get("analyticsUsed", ["dashboard_analytics"])

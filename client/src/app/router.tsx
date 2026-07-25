@@ -105,14 +105,30 @@ export const router = createBrowserRouter([
                 element: <RoleProtectedRoute roles={MODULE_ROLES['crime-management']} />,
                 children: [{ path: 'crimes', element: lazy(() => import('features/crime-management/pages/CrimeManagement')) }],
               },
-              {
-                element: <RoleProtectedRoute roles={MODULE_ROLES['fir-management']} />,
-                children: [{ path: 'firs', element: lazy(() => import('features/fir-management/pages/FirManagement')) }],
-              },
-              {
-                path: 'district/:districtId',
-                element: lazy(() => import('features/district-comparison/pages/DistrictDetail')),
-              },
+               {
+                 element: <RoleProtectedRoute roles={MODULE_ROLES['fir-management']} />,
+                 children: [{ path: 'firs', element: lazy(() => import('features/fir-management/pages/FirManagement')) }],
+               },
+               {
+                 element: <RoleProtectedRoute roles={MODULE_ROLES['ai-investigation']} />,
+                 children: [{ path: 'ai-investigation', element: lazy(() => import('features/ai-investigation/pages/AiInvestigation')) }],
+               },
+               {
+                 element: <RoleProtectedRoute roles={MODULE_ROLES['evidence-analyzer']} />,
+                 children: [{ path: 'evidence-analyzer', element: lazy(() => import('features/evidence-analyzer/pages/EvidenceAnalyzer')) }],
+               },
+               {
+                 element: <RoleProtectedRoute roles={MODULE_ROLES['timeline']} />,
+                 children: [{ path: 'timeline', element: lazy(() => import('features/timeline/pages/Timeline')) }],
+               },
+               {
+                 element: <RoleProtectedRoute roles={MODULE_ROLES['ai-reports']} />,
+                 children: [{ path: 'ai-reports', element: lazy(() => import('features/ai-reports/pages/AiReports')) }],
+               },
+               {
+                 path: 'district/:districtId',
+                 element: lazy(() => import('features/district-comparison/pages/DistrictDetail')),
+               },
             ],
           },
         ],

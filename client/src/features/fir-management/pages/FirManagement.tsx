@@ -4,6 +4,7 @@ import type { DataTableColumn } from 'shared/components';
 import { districtsApi } from 'shared/api';
 import { useFirs, useCreateFir, useUpdateFir, useDeleteFir } from 'features/fir-management/hooks/useFirs';
 import toast from 'react-hot-toast';
+import FirIntelligenceWorkspace from '../components/FirIntelligenceWorkspace';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Statuses' },
@@ -251,7 +252,6 @@ const FirManagement: React.FC = () => {
       await deleteMutation.mutateAsync(deletingFir.ROWID);
       toast.success('FIR deleted successfully');
       setDeletingFir(null);
-      refetch();
     } catch {
       toast.error('Failed to delete FIR');
     }
@@ -485,49 +485,13 @@ const FirManagement: React.FC = () => {
       </Modal>
 
       {/* Detail Modal */}
-      <Modal
-        isOpen={!!viewingFir}
-        onClose={() => setViewingFir(null)}
-        title="FIR Details"
-        footer={
-          <div className="flex justify-end">
-            <Button variant="ghost" onClick={() => setViewingFir(null)}>Close</Button>
-          </div>
-        }
-      >
-        {viewingFir && (
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="font-medium text-gray-700">FIR Number:</span>
-              <p className="text-gray-900">{viewingFir.fir_number}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Crime ID:</span>
-              <p className="text-gray-900">{viewingFir.crime_id}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Police Station:</span>
-              <p className="text-gray-900">{viewingFir.station_id}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Investigating Officer:</span>
-              <p className="text-gray-900">{viewingFir.officer_id}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Description:</span>
-              <p className="text-gray-900">{viewingFir.description}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Status:</span>
-              <Badge variant={STATUS_BADGE_VARIANT[viewingFir.status] ?? 'secondary'}>{viewingFir.status}</Badge>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Created:</span>
-              <p className="text-gray-900">{new Date(viewingFir.CREATEDTIME).toLocaleString()}</p>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {viewingFir && (
+        <FirIntelligenceWorkspace
+          fir={viewingFir}
+          allFirs={listRows}
+          onClose={() => setViewingFir(null)}
+        />
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmDialog

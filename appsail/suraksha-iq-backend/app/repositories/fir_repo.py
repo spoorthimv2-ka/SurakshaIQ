@@ -153,6 +153,50 @@ class FIRRepository(BaseCatalystRepository):
             logger.error(f"Error counting FIRs by status {status}: {e}")
             raise RepositoryError(f"Failed to count FIRs by status: {e}")
 
+    async def count_by_district(self, district_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
+        """Counts FIRs within an optional date range for a district."""
+        try:
+            clauses: List[str] = [f"district_id = {self._zcql_escape(district_id)}"]
+            if date_from:
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
+            if date_to:
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}{where}"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                first_row = result[0]
+                for table_data in first_row.values():
+                    for val in table_data.values():
+                        if isinstance(val, (int, float, str)) and str(val).isdigit():
+                            return int(val)
+            return 0
+        except CatalystError as e:
+            logger.error(f"Error counting FIRs by district {district_id}: {e}")
+            raise RepositoryError(f"Failed to count FIRs by district: {e}")
+
+    async def count_by_station(self, station_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
+        """Counts FIRs within an optional date range for a police station."""
+        try:
+            clauses: List[str] = [f"station_id = {self._zcql_escape(station_id)}"]
+            if date_from:
+                clauses.append(f"CREATEDTIME >= {self._zcql_escape(date_from)}")
+            if date_to:
+                clauses.append(f"CREATEDTIME <= {self._zcql_escape(date_to)}")
+            where = f" WHERE {' AND '.join(clauses)}"
+            query = f"SELECT COUNT(ROWID) FROM {self.table_name}{where}"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                first_row = result[0]
+                for table_data in first_row.values():
+                    for val in table_data.values():
+                        if isinstance(val, (int, float, str)) and str(val).isdigit():
+                            return int(val)
+            return 0
+        except CatalystError as e:
+            logger.error(f"Error counting FIRs by station {station_id}: {e}")
+            raise RepositoryError(f"Failed to count FIRs by station: {e}")
+
     async def count_by_date_range(self, date_from: Optional[str] = None, date_to: Optional[str] = None) -> int:
         """Counts FIRs within an optional date range."""
         try:

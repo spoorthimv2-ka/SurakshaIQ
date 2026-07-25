@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, MapPin, FileCheck, ShieldAlert, ClipboardList, Users, Map, BarChart2, Bell, Eye, Video, Megaphone, Search, Activity } from 'lucide-react';
 import { KpiCard, Card, AlertBanner, DataTable, LoadingSkeleton, EmptyState } from 'shared/components';
+import toast from 'react-hot-toast';
 import { useDashboardSummary, useRecentCrimes, useRecentFirs, useCrimeTrends } from 'features/dashboard/hooks/useDashboard';
 import { useHotspots } from 'features/hotspots/hooks/useHotspots';
 import { useAnomalies } from 'features/anomalies/hooks/useAnomalies';
@@ -17,8 +18,10 @@ import ResourceRecommendations from 'shared/components/resource-recommendations/
 import EmergingAlerts from 'shared/components/emerging-alerts/EmergingAlerts';
 import QuickActions from 'shared/components/quick-actions/QuickActions';
 import AIAssistant from 'shared/components/ai-assistant/AIAssistant';
+import ExplainButton from 'shared/components/explain-button/ExplainButton';
+import AIPanel from 'shared/components/ai-panel/AIPanel';
 import { alertsApi } from 'shared/api/alertsApi';
-import { aiService } from 'services/aiService';
+import { aiService, useAiExplain } from 'services/aiService';
 
 const DETECTION_RATE_MOCK = 68.5;
 
@@ -49,6 +52,8 @@ const Dashboard: React.FC = () => {
   const [aiBriefing, setAiBriefing] = useState<ExecutiveBriefing | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState(false);
+  const [explainState, setExplainState] = useState<Record<string, { data: any; explanation?: string }>>({});
+  const explainMutation = useAiExplain();
 
   if (summaryError) {
     return (
@@ -100,6 +105,27 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     refreshAi();
   }, [refreshAi]);
+
+  const handleExplain = useCallback(async (widget: string, data: any) => {
+    setExplainState((prev) => ({ ...prev, [widget]: { data } }));
+    try {
+      const state = useFilterStore.getState();
+      const filters: Record<string, unknown> = {};
+      Object.entries(state).forEach(([k, v]) => {
+        if (k !== 'setJurisdiction' && k !== 'setDistrictId' && k !== 'setPoliceStation' && k !== 'setDateRange' && k !== 'setCaseCategory' && k !== 'setSeverity' && k !== 'setCrimeStatus' && k !== 'setTimePreset' && k !== 'resetFilters') {
+          filters[k] = v as unknown;
+        }
+      });
+      const res = await explainMutation.mutateAsync({
+        chart_type: widget,
+        data,
+        filters,
+      });
+      setExplainState((prev) => ({ ...prev, [widget]: { ...prev[widget], explanation: res.explanation } }));
+    } catch {
+      toast.error('Failed to generate explanation');
+    }
+  }, [explainMutation, useFilterStore]);
 
   const refreshAll = useCallback(async () => {
     await Promise.all([
@@ -233,19 +259,61 @@ const Dashboard: React.FC = () => {
         {/* Left Column */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Hotspot Snapshot</h2>
+              <ExplainButton
+                onClick={() => handleExplain('hotspots', snapshotHotspots)}
+                isLoading={explainMutation.isPending && explainState['hotspots']?.data !== undefined}
+              />
+            </div>
             <HotspotSnapshot
-              title="Hotspot Snapshot"
-              heatmapPreview="/heatmap-placeholder.svg"
+              title=""
+              heatmapPreview="heatmap-placeholder.svg"
               topHotspots={snapshotHotspots}
             />
+            {explainState['hotspots']?.explanation && (
+              <AIPanel
+                title="Hotspot Explanation"
+                isFallback={explainMutation.data?.isFallback}
+                confidence={explainMutation.data?.confidence}
+                analyticsUsed={explainMutation.data?.analyticsUsed}
+                model={explainMutation.data?.model}
+                generatedAt={explainMutation.data?.generatedAt}
+                onRetry={() => handleExplain('hotspots', snapshotHotspots)}
+                className="mt-4"
+              >
+                <p className="text-sm text-gray-800 dark:text-gray-200">{explainState['hotspots']?.explanation}</p>
+              </AIPanel>
+            )}
           </Card>
 
           <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Crime Trends</h2>
+              <ExplainButton
+                onClick={() => handleExplain('crime_trends', { trends: trends ?? [], filters })}
+                isLoading={explainMutation.isPending && explainState['crime_trends']?.data !== undefined}
+              />
+            </div>
             <TrendIntelligence
-              title="Crime Trends"
+              title=""
               filters={filters}
               height={320}
             />
+            {explainState['crime_trends']?.explanation && (
+              <AIPanel
+                title="Trend Explanation"
+                isFallback={explainMutation.data?.isFallback}
+                confidence={explainMutation.data?.confidence}
+                analyticsUsed={explainMutation.data?.analyticsUsed}
+                model={explainMutation.data?.model}
+                generatedAt={explainMutation.data?.generatedAt}
+                onRetry={() => handleExplain('crime_trends', { trends: trends ?? [], filters })}
+                className="mt-4"
+              >
+                <p className="text-sm text-gray-800 dark:text-gray-200">{explainState['crime_trends']?.explanation}</p>
+              </AIPanel>
+            )}
           </Card>
         </div>
 
@@ -262,8 +330,15 @@ const Dashboard: React.FC = () => {
           </Card>
 
           <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Live Intelligence Feed</h2>
+              <ExplainButton
+                onClick={() => handleExplain('live_intelligence_feed', liveFeedItems)}
+                isLoading={explainMutation.isPending && explainState['live_intelligence_feed']?.data !== undefined}
+              />
+            </div>
             <LiveIntelligenceFeed
-              title="Live Intelligence Feed"
+              title=""
               items={
                 liveFeedItems.length
                   ? liveFeedItems
@@ -272,11 +347,32 @@ const Dashboard: React.FC = () => {
                     ]
               }
             />
+            {explainState['live_intelligence_feed']?.explanation && (
+              <AIPanel
+                title="Feed Explanation"
+                isFallback={explainMutation.data?.isFallback}
+                confidence={explainMutation.data?.confidence}
+                analyticsUsed={explainMutation.data?.analyticsUsed}
+                model={explainMutation.data?.model}
+                generatedAt={explainMutation.data?.generatedAt}
+                onRetry={() => handleExplain('live_intelligence_feed', liveFeedItems)}
+                className="mt-4"
+              >
+                <p className="text-sm text-gray-800 dark:text-gray-200">{explainState['live_intelligence_feed']?.explanation}</p>
+              </AIPanel>
+            )}
           </Card>
 
           <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Emerging Alerts</h2>
+              <ExplainButton
+                onClick={() => handleExplain('emerging_alerts', emergingAlertItems)}
+                isLoading={explainMutation.isPending && explainState['emerging_alerts']?.data !== undefined}
+              />
+            </div>
             <EmergingAlerts
-              title="Emerging Alerts"
+              title=""
               alerts={
                 emergingAlertItems.length
                   ? emergingAlertItems
@@ -285,6 +381,20 @@ const Dashboard: React.FC = () => {
                     ]
               }
             />
+            {explainState['emerging_alerts']?.explanation && (
+              <AIPanel
+                title="Alerts Explanation"
+                isFallback={explainMutation.data?.isFallback}
+                confidence={explainMutation.data?.confidence}
+                analyticsUsed={explainMutation.data?.analyticsUsed}
+                model={explainMutation.data?.model}
+                generatedAt={explainMutation.data?.generatedAt}
+                onRetry={() => handleExplain('emerging_alerts', emergingAlertItems)}
+                className="mt-4"
+              >
+                <p className="text-sm text-gray-800 dark:text-gray-200">{explainState['emerging_alerts']?.explanation}</p>
+              </AIPanel>
+            )}
           </Card>
         </div>
       </div>
@@ -293,10 +403,31 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 xl:col-span-8">
           <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-navy-700 dark:text-white">Resource Recommendations</h2>
+              <ExplainButton
+                onClick={() => handleExplain('resource_recommendations', mockResourceRecommendations)}
+                isLoading={explainMutation.isPending && explainState['resource_recommendations']?.data !== undefined}
+              />
+            </div>
             <ResourceRecommendations
-              title="Resource Recommendations"
+              title=""
               recommendations={mockResourceRecommendations}
             />
+            {explainState['resource_recommendations']?.explanation && (
+              <AIPanel
+                title="Recommendations Explanation"
+                isFallback={explainMutation.data?.isFallback}
+                confidence={explainMutation.data?.confidence}
+                analyticsUsed={explainMutation.data?.analyticsUsed}
+                model={explainMutation.data?.model}
+                generatedAt={explainMutation.data?.generatedAt}
+                onRetry={() => handleExplain('resource_recommendations', mockResourceRecommendations)}
+                className="mt-4"
+              >
+                <p className="text-sm text-gray-800 dark:text-gray-200">{explainState['resource_recommendations']?.explanation}</p>
+              </AIPanel>
+            )}
           </Card>
         </div>
         <div className="col-span-12 xl:col-span-4">

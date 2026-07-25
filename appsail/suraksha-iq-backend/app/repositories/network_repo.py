@@ -21,6 +21,7 @@ class NetworkRepository(BaseCatalystRepository):
             districts = await self._fetch_districts(limit)
             stations = await self._fetch_stations(limit)
             officers = await self._fetch_officers(limit)
+            links = await self._fetch_crime_criminal_links(limit)
             return {
                 "crimes": crimes,
                 "firs": firs,
@@ -28,6 +29,7 @@ class NetworkRepository(BaseCatalystRepository):
                 "districts": districts,
                 "stations": stations,
                 "officers": officers,
+                "links": links,
             }
         except CatalystError as e:
             logger.error(f"Error fetching network data: {e}")
@@ -85,6 +87,15 @@ class NetworkRepository(BaseCatalystRepository):
         for item in result:
             if "Officer" in item:
                 rows.append(item["Officer"])
+        return rows
+
+    async def _fetch_crime_criminal_links(self, limit: int) -> List[Dict[str, Any]]:
+        query = f"SELECT * FROM CrimeCriminalLink LIMIT {int(limit)}"
+        result = self.zcql.execute_query(query)
+        rows = []
+        for item in result:
+            if "CrimeCriminalLink" in item:
+                rows.append(item["CrimeCriminalLink"])
         return rows
 
     async def find_all_nodes(self, limit: int = 500) -> List[Dict[str, Any]]:
@@ -187,3 +198,16 @@ class NetworkRepository(BaseCatalystRepository):
                 edges.append({"source": oid, "target": sid, "type": "belongs_to", "properties": {}})
 
         return edges[:limit]
+
+    async def get_crime_criminal_links(self, limit: int = 500) -> List[Dict[str, Any]]:
+        query = f"SELECT * FROM CrimeCriminalLink LIMIT {int(limit)}"
+        result = self.zcql.execute_query(query)
+        rows = []
+        for item in result:
+            if "CrimeCriminalLink" in item:
+                rows.append(item["CrimeCriminalLink"])
+        return rows
+
+    async def get_analytics_data(self, limit: int = 500) -> Dict[str, Any]:
+        data = await self.get_network_data(limit=limit)
+        return data

@@ -1,7 +1,7 @@
 """
 Catalyst AI Client
 
-Reusable client for interacting with Zoho Catalyst AI.
+Reusable client for interacting with Zoho Catalyst QuickML LLM Serving APIs.
 """
 
 from typing import Any, Dict, List, Optional
@@ -14,11 +14,13 @@ from zcatalyst_sdk.exceptions import CatalystError
 
 
 class CatalystAIClient:
-    """Thin wrapper around Zoho Catalyst AI."""
+    """Thin wrapper around Zoho Catalyst QuickML."""
 
     def __init__(self, request: Any) -> None:
         self.request = request
-        self.app = catalyst_manager.get_app(request)
+        self.app = catalyst_manager.get_app_for_ai(request)
+        if self.app is None:
+            raise RepositoryError("Catalyst SDK unavailable for AI. Falling back to local intelligence.")
 
     async def generate_completion(
         self,
@@ -29,7 +31,7 @@ class CatalystAIClient:
         max_tokens: Optional[int] = None,
         response_format: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Call Catalyst AI for a structured completion."""
+        """Call QuickML for a structured completion."""
         try:
             payload: Dict[str, Any] = {
                 "model": model or settings.ai_model,
@@ -41,24 +43,25 @@ class CatalystAIClient:
                 payload["response_format"] = response_format
 
             endpoint = self._resolve_endpoint()
-            logger.info(f"Calling Catalyst AI at {endpoint}")
+            logger.info(f"Calling QuickML at {endpoint}")
 
-            # Use Catalyst SDK HTTP client when available.
             response = self._call_catalyst_api(endpoint, payload)
             return _normalize_ai_response(response)
 
         except CatalystError as e:
-            logger.error(f"Catalyst AI request failed: {e}")
-            raise RepositoryError(f"Catalyst AI request failed: {e}") from e
+            logger.error(f"QuickML request failed: {e}")
+            raise RepositoryError(f"QuickML request failed: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected AI client error: {e}")
             raise RepositoryError(f"Unexpected AI client error: {e}") from e
 
     def _resolve_endpoint(self) -> str:
+        if settings.catalyst_project_id:
+            model = settings.ai_model or "glm"
+            return f"https://api.catalyst.zoho.in/quickml/v1/project/{settings.catalyst_project_id}/{model}/chat"
         base = settings.ai_base_url
         if base:
             return f"{base.rstrip('/')}/chat/completions"
-        # Default Catalyst AI route within the same project/app.
         return "/api/v1/ai/chat/completions"
 
     def _call_catalyst_api(self, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -68,12 +71,12 @@ class CatalystAIClient:
             resp = client.request("POST", path=endpoint, json=payload)
             return resp.json() if hasattr(resp, "json") else resp
         except Exception as e:
-            logger.warning(f"Catalyst SDK AI path failed, falling back to std http: {e}")
+            logger.warning(f"Catalyst SDK AI path failed: {e}")
             raise
 
     @staticmethod
     def is_configured() -> bool:
-        return bool(settings.ai_api_key) or bool(settings.ai_base_url)
+        return bool(settings.catalyst_project_id) or bool(settings.ai_api_key) or bool(settings.ai_base_url)
 
 
 def _normalize_ai_response(response: Dict[str, Any]) -> Dict[str, Any]:

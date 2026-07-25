@@ -13,7 +13,11 @@ export type ModuleKey =
   | 'admin'
   | 'crime-management'
   | 'fir-management'
-  | 'search';
+  | 'search'
+  | 'ai-investigation'
+  | 'evidence-analyzer'
+  | 'timeline'
+  | 'ai-reports';
 
 export interface NavItem {
   module: ModuleKey;
@@ -34,6 +38,10 @@ export const NAV_ITEMS: NavItem[] = [
   { module: 'admin', label: 'Administration', path: '/admin' },
   { module: 'crime-management', label: 'Crime Management', path: '/crimes' },
   { module: 'fir-management', label: 'FIR Management', path: '/firs' },
+  { module: 'ai-investigation', label: 'AI Investigation', path: '/ai-investigation' },
+  { module: 'evidence-analyzer', label: 'Evidence Analyzer', path: '/evidence-analyzer' },
+  { module: 'timeline', label: 'Timeline', path: '/timeline' },
+  { module: 'ai-reports', label: 'AI Reports', path: '/ai-reports' },
 ];
 
 export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
@@ -124,6 +132,42 @@ export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
     'SYSTEM_ADMINISTRATOR',
   ],
   search: [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  'ai-investigation': [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  'evidence-analyzer': [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  timeline: [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  'ai-reports': [
     'STATE_COMMAND',
     'RANGE_IG',
     'DISTRICT_SP',
