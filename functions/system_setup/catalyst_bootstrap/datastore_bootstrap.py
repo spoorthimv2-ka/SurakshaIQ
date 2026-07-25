@@ -9,10 +9,7 @@ from zcatalyst_sdk.exceptions import CatalystError, CatalystAPIError
 from zcatalyst_sdk._http_client import AuthorizedHttpClient, CredentialUser
 from zcatalyst_sdk._constants import RequestMethod
 
-try:
-    from app.core.logger import logger as app_logger
-except ImportError:
-    app_logger = logging.getLogger("bootstrap")
+app_logger = logging.getLogger("bootstrap")
 
 DATASCOPE_USER = CredentialUser.USER
 DATASCOPE_ADMIN = CredentialUser.ADMIN
@@ -133,7 +130,7 @@ TABLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             {"column_name": "rank", "data_type": "varchar", "max_length": 100, "is_mandatory": False},
             {"column_name": "designation", "data_type": "varchar", "max_length": 100, "is_mandatory": False},
             {"column_name": "hashed_password", "data_type": "varchar", "max_length": 255, "is_mandatory": False},
-            {"column_name": "badge_number", "data_type": "varchar", "max_length": 50, "is_mandatory": False},
+            {"column_name": "badge_number", "data_type": "varchar", "max_length": 50, "is_mandatory": True, "is_unique": True},
             {"column_name": "police_station_id", "data_type": "varchar", "max_length": 50, "is_mandatory": False},
             {"column_name": "district_id", "data_type": "varchar", "max_length": 50, "is_mandatory": False},
             {"column_name": "jurisdiction_type", "data_type": "varchar", "max_length": 20, "is_mandatory": False, "default_value": "STATION"},
@@ -245,6 +242,7 @@ def _now_iso() -> str:
 
 def verify_connection() -> Any:
     try:
+        app_logger.info("[TEMP] About to call zcatalyst_sdk.initialize_app()")
         return zcatalyst_sdk.initialize_app()
     except CatalystAppError as exc:
         raise RuntimeError(f"Catalyst authentication failed: {exc}") from exc
@@ -403,7 +401,7 @@ def _get_table_key(table_name: str) -> Optional[str]:
         "PoliceStation": "station_code",
         "Crime": "fir_number",
         "FIR": "fir_number",
-        "Officer": "email",
+        "Officer": "badge_number",
         "User": "email",
         "CrimeHotspotCluster": "cluster_id",
     }
@@ -577,12 +575,14 @@ def seed_demo_data(app) -> Tuple[int, int]:
         s2rid = s2.get("ROWID", "") if s2 else ""
 
         demo_email = "demo@karnatakapolice.gov.in"
+        demo_badge = "KSP-000001"
         officer_rowid = None
-        if not _row_exists(app, "Officer", "email", demo_email):
+        if not _row_exists(app, "Officer", "badge_number", demo_badge):
             hashed = _bcrypt_hash("Demo@1234")
             o = off_tbl.insert_row({
                 "name": "Demo Officer",
                 "email": demo_email,
+                "badge_number": demo_badge,
                 "role": "SYSTEM_ADMINISTRATOR",
                 "hashed_password": hashed,
                 "police_station_id": s1rid,
@@ -592,7 +592,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
             officer_rowid = o.get("ROWID")
         else:
             skipped += 1
-            q = f"SELECT ROWID FROM Officer WHERE email = '{str(demo_email).replace(chr(39), chr(39)+chr(39))}' LIMIT 1"
+            q = f"SELECT ROWID FROM Officer WHERE badge_number = '{str(demo_badge).replace(chr(39), chr(39)+chr(39))}' LIMIT 1"
             res = app.zcql().execute_query(q)
             if res and len(res) > 0:
                 officer_rowid = res[0].get("Officer", {}).get("ROWID")
@@ -759,7 +759,7 @@ def create_default_users(app) -> Tuple[int, int]:
     skipped = 0
 
     for idx, role in enumerate(roles, start=1):
-        badge_number = f"BADGE-{role[:3].upper()}-{idx:03d}"
+        badge_number = f"KSP-{idx:06d}"
         name = role.replace("_", " ").title()
         email = f"officer{idx}@suraksha.gov.in"
         password = "Default@123"
@@ -779,8 +779,8 @@ def create_default_users(app) -> Tuple[int, int]:
         }
         try:
             is_dup = False
-            safe_email = str(email).replace(chr(39), chr(39) + chr(39))
-            q = f"SELECT ROWID FROM Officer WHERE email = '{safe_email}' LIMIT 1"
+            safe_badge = str(badge_number).replace(chr(39), chr(39) + chr(39))
+            q = f"SELECT ROWID FROM Officer WHERE badge_number = '{safe_badge}' LIMIT 1"
             result = app.zcql().execute_query(q)
             if result and len(result) > 0:
                 is_dup = True
@@ -854,6 +854,7 @@ def generate_summary(
 
 
 def bootstrap() -> Dict[str, Any]:
+    app_logger.info("[TEMP] bootstrap() started")
     summary: Dict[str, Any] = {
         "success": False,
         "sdk_capabilities": {},
@@ -866,31 +867,42 @@ def bootstrap() -> Dict[str, Any]:
     errors: List[str] = []
 
     try:
+        app_logger.info("[TEMP] About to call verify_connection()")
         app = verify_connection()
+        app_logger.info("[TEMP] verify_connection() succeeded")
     except Exception as exc:
+        app_logger.error("[TEMP] verify_connection() failed: %s", exc)
         summary["errors"].append(str(exc))
         return summary
 
     requester = _get_requester(app)
+    app_logger.info("[TEMP] About to call check_sdk_capabilities()")
     capabilities = check_sdk_capabilities(app)
     summary["sdk_capabilities"] = capabilities
+    app_logger.info("[TEMP] SDK capabilities: %s", capabilities)
 
     if not capabilities["schema_inspection"]:
         errors.append("Schema inspection is not supported by this SDK.")
 
+    app_logger.info("[TEMP] About to call inspect_datastore()")
     existing = inspect_datastore(app)
     summary["tables_existing"] = len(existing)
+    app_logger.info("[TEMP] Existing tables found: %s", len(existing))
 
     if capabilities["table_creation"] and requester:
+        app_logger.info("[TEMP] About to call create_tables()")
         created = create_tables(app, requester, existing)
         summary["tables_created"] = created
+        app_logger.info("[TEMP] Tables created: %s", created)
         if created == 0 and len(existing) == 0:
             errors.append("Table creation is supported but no tables were created.")
+        app_logger.info("[TEMP] About to call inspect_datastore() again")
         existing = inspect_datastore(app)
     else:
         errors.append("Table creation is not supported by the current Catalyst SDK or runtime.")
 
     if capabilities["column_creation"] and requester:
+        app_logger.info("[TEMP] About to call create_columns()")
         create_columns(app, requester, existing)
     else:
         errors.append("Column creation is not supported by the current Catalyst SDK or runtime.")
@@ -899,29 +911,46 @@ def bootstrap() -> Dict[str, Any]:
     demo_ins, demo_skp = 0, 0
     users_ins, users_skp = 0, 0
     try:
+        app_logger.info("[TEMP] About to seed_master_data()")
         master_ins, master_skp = seed_master_data(app)
+        app_logger.info("[TEMP] seed_master_data() returned: %s, %s", master_ins, master_skp)
     except Exception as exc:
+        app_logger.error("[TEMP] seed_master_data() failed: %s", exc)
         errors.append(f"Master data seeding failed: {exc}")
 
     try:
+        app_logger.info("[TEMP] About to seed_demo_data()")
         demo_ins, demo_skp = seed_demo_data(app)
+        app_logger.info("[TEMP] seed_demo_data() returned: %s, %s", demo_ins, demo_skp)
     except Exception as exc:
+        app_logger.error("[TEMP] seed_demo_data() failed: %s", exc)
         errors.append(f"Demo data seeding failed: {exc}")
 
     try:
+        app_logger.info("[TEMP] About to create_default_users()")
         users_ins, users_skp = create_default_users(app)
+        app_logger.info("[TEMP] create_default_users() returned: %s, %s", users_ins, users_skp)
     except Exception as exc:
+        app_logger.error("[TEMP] create_default_users() failed: %s", exc)
         errors.append(f"Default user creation failed: {exc}")
 
+    app_logger.info("[TEMP] About to compute summary rows_inserted and duplicates_skipped")
     summary["rows_inserted"] = master_ins + demo_ins + users_ins
     summary["duplicates_skipped"] = master_skp + demo_skp + users_skp
 
     try:
+        app_logger.info("[TEMP] About to call verify_integrity()")
         integrity_errors = verify_integrity(app)
         errors.extend(integrity_errors)
+        app_logger.info("[TEMP] verify_integrity() returned %s errors", len(integrity_errors))
     except Exception as exc:
         errors.append(f"Integrity verification failed: {exc}")
 
     summary["errors"] = errors
     summary["success"] = True
+    app_logger.info("[TEMP] bootstrap() completed successfully")
     return summary
+
+
+
+

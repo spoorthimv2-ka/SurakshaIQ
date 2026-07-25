@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy import String, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.enums import Role, JurisdictionType, AccountStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from app.database.postgres.base import Base, UUIDMixin, TimestampMixin, SoftDeleteMixin
 
 if TYPE_CHECKING:
@@ -13,7 +13,7 @@ class Officer(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
 
     catalyst_user_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True, nullable=True)
     role: Mapped[Role] = mapped_column(SQLEnum(Role, native_enum=False, length=50), nullable=False)
     rank: Mapped[str | None] = mapped_column(String(100), nullable=True)
     designation: Mapped[str | None] = mapped_column(String(100), nullable=True)

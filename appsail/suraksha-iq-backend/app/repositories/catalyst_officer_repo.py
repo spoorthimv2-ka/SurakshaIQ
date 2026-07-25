@@ -13,6 +13,18 @@ class CatalystOfficerRepository(BaseCatalystRepository):
     def __init__(self, request: Request):
         super().__init__(request, table_name="Officer")
 
+    async def find_by_badge_number(self, badge_number: str) -> Optional[Dict[str, Any]]:
+        """Retrieves an officer by badge_number using ZCQL."""
+        try:
+            query = f"SELECT * FROM {self.table_name} WHERE badge_number = {self._zcql_escape(badge_number)} LIMIT 1"
+            result = self.zcql.execute_query(query)
+            if result and len(result) > 0:
+                return result[0].get(self.table_name)
+            return None
+        except CatalystError as e:
+            logger.error(f"Error fetching officer by badge_number {badge_number}: {e}")
+            raise RepositoryError(f"Failed to fetch officer by badge_number: {e}")
+
     async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Retrieves an officer by email using ZCQL."""
         try:

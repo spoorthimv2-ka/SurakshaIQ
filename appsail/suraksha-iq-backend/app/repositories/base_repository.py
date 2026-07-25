@@ -38,7 +38,7 @@ ALLOWED_COLUMNS: Dict[str, Tuple[str, ...]] = {
         "CREATEDTIME", "MODIFIEDTIME",
     ),
     "Officer": (
-        "ROWID", "catalyst_user_id", "name", "email", "role", "rank",
+        "ROWID", "catalyst_user_id", "name", "email", "badge_number", "role", "rank",
         "designation", "hashed_password", "police_station_id", "status",
         "CREATEDTIME", "MODIFIEDTIME",
     ),

@@ -5,7 +5,7 @@ from app.schemas.enums import EntityStatus
 
 class OfficerBase(BaseModel):
     name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     role: Role
     badge_number: str
     station_id: Optional[str] = None

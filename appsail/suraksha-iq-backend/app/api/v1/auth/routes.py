@@ -7,7 +7,7 @@ from app.api.deps import get_current_officer, RequirePermission
 from pydantic import BaseModel
 
 class LoginRequest(BaseModel):
-    email: str
+    badge_number: str
     password: str
 
 router = APIRouter()
@@ -18,7 +18,7 @@ async def login(
     body: LoginRequest,
 ) -> Dict[str, Any]:
     auth_service = AuthService(request)
-    officer = await auth_service.login(body.email, body.password)
+    officer = await auth_service.login(body.badge_number, body.password)
     return officer
 
 @router.post("/logout")

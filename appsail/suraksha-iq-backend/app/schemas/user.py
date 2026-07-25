@@ -5,7 +5,7 @@ from app.models.enums import Role
 from app.schemas.enums import EntityStatus
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
     role: Role
     status: EntityStatus = EntityStatus.ACTIVE
 

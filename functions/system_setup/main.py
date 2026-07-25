@@ -1,33 +1,35 @@
 import json
 import logging
-import os
 import sys
 from pathlib import Path
 
 log = logging.getLogger("system_setup")
 
-_this_file = Path(__file__).resolve()
-_project_root = _this_file.parents[2]
-_appsail_dir = _project_root / "appsail" / "suraksha-iq-backend"
-_path_candidates = [
-    str(_appsail_dir),
-    str(_project_root),
-]
-for _p in _path_candidates:
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+# [TEMP LOGGING] Module entry point
+log.info("[TEMP] system_setup module loaded")
+# [END TEMP LOGGING]
 
 try:
-    from app.bootstrap.datastore_bootstrap import bootstrap as _bootstrap
+    from catalyst_bootstrap.datastore_bootstrap import bootstrap as _bootstrap
+    log.info("[TEMP] Successfully imported catalyst_bootstrap.datastore_bootstrap")
 except ImportError as _import_err:
+    log.error("[TEMP] Failed to import bootstrap module: %s", _import_err)
     raise ImportError(
-        f"Failed to import bootstrap module. Tried paths: {_path_candidates}. Error: {_import_err}"
+        f"Failed to import bootstrap module from local catalyst_bootstrap package. Error: {_import_err}"
     )
 
 
 def handler(context, basicio):
+    log.info("[TEMP] handler() invoked")
     try:
+        log.info("[TEMP] About to call bootstrap()")
         result = _bootstrap()
+        log.info(
+            "[TEMP] bootstrap() returned: success=%s, tables_created=%s, rows_inserted=%s",
+            result.get("success"),
+            result.get("tables_created"),
+            result.get("rows_inserted"),
+        )
         basicio.write(json.dumps(result))
         log.info("Bootstrap completed successfully")
     except Exception as exc:

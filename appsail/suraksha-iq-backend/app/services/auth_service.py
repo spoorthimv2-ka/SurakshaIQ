@@ -64,22 +64,40 @@ class AuthService:
             d["MODIFIEDTIME"] = updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
         return d
 
-    async def login(self, email: str, password: str) -> Dict[str, Any]:
-        officer = await self.officer_auth_repo.find_by_email(email)
+    async def login(self, badge_number: str, password: str) -> Dict[str, Any]:
+        officer = await self.officer_auth_repo.find_by_badge_number(badge_number)
         if not officer:
             raise_unauthorized("Invalid credentials.")
+
+        account_status = self._get_attr(officer, "account_status", "ACTIVE")
+        if account_status != "ACTIVE":
+            raise_unauthorized("Account is inactive or locked.")
+
+        locked_until = self._get_attr(officer, "locked_until")
+        if locked_until:
+            try:
+                from datetime import datetime
+                if datetime.fromisoformat(locked_until) > datetime.now(datetime.now().astimezone().tzinfo):
+                    raise_unauthorized("Account is temporarily locked due to too many failed attempts.")
+            except Exception:
+                pass
+
         hashed_password = self._get_attr(officer, "hashed_password")
         if not hashed_password:
             raise_unauthorized("Invalid credentials.")
         if not verify_password(password, hashed_password):
+            await self.increment_failed_attempts(officer)
             raise_unauthorized("Invalid credentials.")
+
+        await self.reset_failed_attempts(officer)
+        await self.update_last_login(officer)
 
         role_str = self._get_role_str(officer)
         permissions = self._get_permissions(role_str)
 
         row_id = self._get_attr(officer, "ROWID") or self._get_attr(officer, "row_id") or self._get_attr(officer, "id") or ""
         cat_id = self._get_attr(officer, "user_id") or self._get_attr(officer, "catalyst_user_id") or ""
-        badge_number = self._get_attr(officer, "badge_number") or ""
+        badge_number_val = self._get_attr(officer, "badge_number") or ""
         police_station_id = self._get_attr(officer, "police_station_id") or self._get_attr(officer, "station_id")
         district_id = self._get_attr(officer, "district_id") or ""
         jurisdiction_type = self._get_attr(officer, "jurisdiction_type") or ""
@@ -94,7 +112,7 @@ class AuthService:
         payload = {
             "sub": str(row_id),
             "cat_id": str(cat_id),
-            "badge_number": str(badge_number),
+            "badge_number": str(badge_number_val),
             "role": role_str,
             "permissions": permissions,
             "jurisdiction_type": jurisdiction_type,
@@ -115,6 +133,46 @@ class AuthService:
             "token_type": "bearer",
             "officer": officer_dict,
         }
+
+    async def increment_failed_attempts(self, officer: Dict[str, Any]) -> None:
+        row_id = self._get_attr(officer, "ROWID") or self._get_attr(officer, "row_id") or self._get_attr(officer, "id")
+        if not row_id:
+            return
+        current_attempts = self._get_attr(officer, "failed_attempts", 0)
+        try:
+            current_attempts = int(current_attempts)
+        except (TypeError, ValueError):
+            current_attempts = 0
+        update_data: Dict[str, Any] = {"failed_attempts": current_attempts + 1}
+        if current_attempts + 1 >= 5:
+            update_data["account_status"] = "LOCKED"
+            from datetime import datetime, timezone, timedelta
+            locked_until = datetime.now(timezone.utc).__add__(timedelta(minutes=15)).isoformat()
+            update_data["locked_until"] = locked_until
+        update_data["ROWID"] = row_id
+        self.officer_repo.get_table().update_row(update_data)
+
+    async def reset_failed_attempts(self, officer: Dict[str, Any]) -> None:
+        row_id = self._get_attr(officer, "ROWID") or self._get_attr(officer, "row_id") or self._get_attr(officer, "id")
+        if not row_id:
+            return
+        self.officer_repo.get_table().update_row({
+            "ROWID": row_id,
+            "failed_attempts": 0,
+            "account_status": "ACTIVE",
+            "locked_until": None,
+        })
+
+    async def update_last_login(self, officer: Dict[str, Any]) -> None:
+        row_id = self._get_attr(officer, "ROWID") or self._get_attr(officer, "row_id") or self._get_attr(officer, "id")
+        if not row_id:
+            return
+        from datetime import datetime, timezone
+        last_login = datetime.now(timezone.utc).isoformat()
+        self.officer_repo.get_table().update_row({
+            "ROWID": row_id,
+            "last_login": last_login,
+        })
 
     async def logout(self) -> Dict[str, Any]:
         return {"message": "Successfully logged out of backend session."}
