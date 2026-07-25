@@ -13,6 +13,7 @@ from .firs.routes import router as firs_router
 from .hotspots.routes import router as hotspots_router
 from .network.routes import router as network_router
 from .repeat_offenders.routes import router as repeat_offenders_router
+from .predictive.routes import router as predictive_router
 from .reports.routes import router as reports_router
 from .risk.routes import router as risk_router
 from .search.routes import router as search_router
@@ -32,6 +33,7 @@ api_router.include_router(districts_router, prefix="/districts", tags=["District
 api_router.include_router(firs_router, prefix="/firs", tags=["FIRs"])
 api_router.include_router(hotspots_router, prefix="/hotspots", tags=["Hotspots"])
 api_router.include_router(network_router, prefix="/network", tags=["Network"])
+api_router.include_router(predictive_router, prefix="/predictive", tags=["Predictive Intelligence"])
 api_router.include_router(repeat_offenders_router, prefix="/repeat-offenders", tags=["Repeat Offenders"])
 api_router.include_router(reports_router, prefix="/reports", tags=["Reports"])
 api_router.include_router(risk_router, prefix="/predictive-risk", tags=["Predictive Risk"])

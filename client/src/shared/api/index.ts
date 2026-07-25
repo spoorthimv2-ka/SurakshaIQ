@@ -42,6 +42,24 @@ export { districtsApi } from './districtsApi';
 export type { DistrictSummary } from './districtsApi';
 export { reportsApi } from './reportsApi';
 export type { ReportRecord, ReportSummary, ReportTypeInfo, ReportFilters, GeneratedReportResponse } from './reportsApi';
+export { predictiveApi } from './predictiveApi';
+export type {
+  PredictiveFilters,
+  ForecastPoint,
+  CrimeForecast,
+  EmergingHotspot,
+  RiskIndex,
+  PatrolRecommendation,
+  TemporalDistribution,
+  TemporalIntelligence,
+  TrendCategory,
+  EmergingPattern,
+  TrendAnalysis,
+  ScenarioFilters,
+  ScenarioSimulation,
+  PredictiveDashboard,
+  PredictiveAIExplanation,
+} from './predictiveApi';
 export { adminApi } from './adminApi';
 export type { AdminUser, AdminUserCreate, AdminUserUpdate, RoleInfo, AdminStatistics, AuditLog, UserFilters } from './adminApi';
 export { dashboardApi } from './dashboardApi';

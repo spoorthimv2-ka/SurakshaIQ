@@ -117,10 +117,14 @@ export const router = createBrowserRouter([
                  element: <RoleProtectedRoute roles={MODULE_ROLES['evidence-analyzer']} />,
                  children: [{ path: 'evidence-analyzer', element: lazy(() => import('features/evidence-analyzer/pages/EvidenceAnalyzer')) }],
                },
-               {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES['timeline']} />,
-                 children: [{ path: 'timeline', element: lazy(() => import('features/timeline/pages/Timeline')) }],
-               },
+                {
+                  element: <RoleProtectedRoute roles={MODULE_ROLES['risk-scoring']} />,
+                  children: [{ path: 'risk-scoring', element: lazy(() => import('features/risk-scoring/pages/RiskScoring')) }],
+                },
+                {
+                  element: <RoleProtectedRoute roles={MODULE_ROLES['predictive-intelligence']} />,
+                  children: [{ path: 'predictive-intelligence', element: lazy(() => import('features/predictive-intelligence/pages/PredictiveIntelligence')) }],
+                },
                {
                  element: <RoleProtectedRoute roles={MODULE_ROLES['ai-reports']} />,
                  children: [{ path: 'ai-reports', element: lazy(() => import('features/ai-reports/pages/AiReports')) }],

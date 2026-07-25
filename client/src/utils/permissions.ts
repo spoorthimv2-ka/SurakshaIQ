@@ -17,7 +17,8 @@ export type ModuleKey =
   | 'ai-investigation'
   | 'evidence-analyzer'
   | 'timeline'
-  | 'ai-reports';
+  | 'ai-reports'
+  | 'predictive-intelligence';
 
 export interface NavItem {
   module: ModuleKey;
@@ -33,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { module: 'repeat-offenders', label: 'Repeat Offenders', path: '/repeat-offenders' },
   { module: 'network-analysis', label: 'Network Analysis', path: '/network-analysis' },
   { module: 'risk-scoring', label: 'Risk Scoring', path: '/risk-scoring' },
+  { module: 'predictive-intelligence', label: 'Predictive Intelligence', path: '/predictive-intelligence' },
   { module: 'alerts', label: 'Alerts', path: '/alerts' },
   { module: 'reports', label: 'Reports', path: '/reports' },
   { module: 'admin', label: 'Administration', path: '/admin' },
@@ -89,6 +91,13 @@ export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
   ],
   'network-analysis': ['CID_ANALYST', 'SYSTEM_ADMINISTRATOR'],
   'risk-scoring': [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  'predictive-intelligence': [
     'STATE_COMMAND',
     'RANGE_IG',
     'DISTRICT_SP',
