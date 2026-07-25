@@ -6,7 +6,9 @@ from app.repositories.officer_repo import OfficerRepository
 from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.core.logger import logger
-from app.core.exceptions import DataValidationError
+from app.core.exceptions import DataValidationError, RepositoryError
+from zcatalyst_sdk.exceptions import CatalystError
+from collections import defaultdict
 
 class AdminService:
     """Service layer for Admin operations."""
@@ -57,7 +59,7 @@ class AdminService:
                 "created_at": u.get("CREATEDTIME", ""),
                 "updated_at": u.get("MODIFIEDTIME", ""),
             })
-        return result
+        return result[offset:offset+limit]
 
     async def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a single user by ID, merged with officer data."""
@@ -207,3 +209,107 @@ class AdminService:
             "metadata": metadata or {},
         }
         return await self.repo.create_audit_log(log_data)
+
+    async def list_officers(self, limit: int = 100, offset: int = 0, station_id: Optional[str] = None, district_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        try:
+            officers = await self.officer_repo.find_all(limit=1000)
+            stations = await self.station_repo.find_all(limit=1000)
+            district_map = {d.get("ROWID", ""): d for d in await self.district_repo.find_all(limit=1000)}
+            result = []
+            for o in officers:
+                sid = o.get("station_id", "")
+                station = next((s for s in stations if s.get("ROWID") == sid), {})
+                did = station.get("district_id", "")
+                district = district_map.get(did, {})
+                if station_id and sid != station_id:
+                    continue
+                if district_id and did != district_id:
+                    continue
+                result.append({
+                    "officer_id": o.get("ROWID", ""),
+                    "name": o.get("name", ""),
+                    "email": o.get("email", ""),
+                    "role": o.get("role", ""),
+                    "rank": o.get("rank", ""),
+                    "designation": o.get("designation", ""),
+                    "station_id": sid,
+                    "station_name": station.get("name", sid),
+                    "district_id": did,
+                    "district_name": district.get("name", did),
+                    "status": o.get("status", "ACTIVE"),
+                    "badge_number": o.get("badge_number", ""),
+                })
+            return result[offset:offset+limit]
+        except CatalystError as e:
+            logger.error(f"Error fetching officers: {e}")
+            raise RepositoryError(f"Failed to fetch officers: {e}")
+
+    async def list_districts(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        try:
+            districts = await self.district_repo.find_all(limit=1000)
+            stations = await self.station_repo.find_all(limit=1000)
+            officers = await self.officer_repo.find_all(limit=1000)
+            station_count: Dict[str, int] = defaultdict(int)
+            for s in stations:
+                did = s.get("district_id", "")
+                if did:
+                    station_count[did] += 1
+            officer_count: Dict[str, int] = defaultdict(int)
+            for o in officers:
+                sid = o.get("station_id", "")
+                if sid:
+                    station = next((s for s in stations if s.get("ROWID") == sid), None)
+                    if station:
+                        did = station.get("district_id", "")
+                        if did:
+                            officer_count[did] += 1
+            result = []
+            for d in districts:
+                did = d.get("ROWID", "")
+                result.append({
+                    "district_id": did,
+                    "district_name": d.get("name", ""),
+                    "state": d.get("state", ""),
+                    "region_code": d.get("region_code", ""),
+                    "status": d.get("status", "ACTIVE"),
+                    "station_count": station_count.get(did, 0),
+                    "officer_count": officer_count.get(did, 0),
+                })
+            return result[offset:offset+limit]
+        except CatalystError as e:
+            logger.error(f"Error fetching districts: {e}")
+            raise RepositoryError(f"Failed to fetch districts: {e}")
+
+    async def list_police_stations(self, limit: int = 100, offset: int = 0, district_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        try:
+            stations = await self.station_repo.find_all(limit=1000)
+            districts = await self.district_repo.find_all(limit=1000)
+            district_map = {d.get("ROWID", ""): d for d in districts}
+            officers = await self.officer_repo.find_all(limit=1000)
+            officer_count: Dict[str, int] = defaultdict(int)
+            for o in officers:
+                sid = o.get("station_id", "")
+                if sid:
+                    officer_count[sid] += 1
+            result = []
+            for s in stations:
+                did = s.get("district_id", "")
+                if district_id and did != district_id:
+                    continue
+                district = district_map.get(did, {})
+                result.append({
+                    "station_id": s.get("ROWID", ""),
+                    "station_name": s.get("name", ""),
+                    "district_id": did,
+                    "district_name": district.get("name", did),
+                    "station_code": s.get("station_code", ""),
+                    "address": s.get("address", ""),
+                    "status": s.get("status", "ACTIVE"),
+                    "officer_count": officer_count.get(s.get("ROWID", ""), 0),
+                    "latitude": s.get("latitude"),
+                    "longitude": s.get("longitude"),
+                })
+            return result[offset:offset+limit]
+        except CatalystError as e:
+            logger.error(f"Error fetching police stations: {e}")
+            raise RepositoryError(f"Failed to fetch police stations: {e}")

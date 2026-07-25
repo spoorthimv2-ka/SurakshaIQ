@@ -88,8 +88,8 @@ const AppShellLayout: React.FC = () => {
             <div className="relative">
               <IconButton
                 icon={<Bell size={20} />}
-                onClick={() => navigate('/alerts')}
-                aria-label="View alerts"
+                onClick={() => navigate('/notifications')}
+                aria-label="View notifications"
               />
               {unreadCount > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-alert-red px-1.5 py-0.5 text-xs font-bold text-white">

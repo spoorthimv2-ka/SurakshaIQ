@@ -17,6 +17,7 @@ from .predictive.routes import router as predictive_router
 from .reports.routes import router as reports_router
 from .risk.routes import router as risk_router
 from .search.routes import router as search_router
+from .settings.routes import router as settings_router
 from .users.routes import router as users_router
 
 api_router = APIRouter()
@@ -38,4 +39,5 @@ api_router.include_router(repeat_offenders_router, prefix="/repeat-offenders", t
 api_router.include_router(reports_router, prefix="/reports", tags=["Reports"])
 api_router.include_router(risk_router, prefix="/predictive-risk", tags=["Predictive Risk"])
 api_router.include_router(search_router, prefix="/search", tags=["Search"])
+api_router.include_router(settings_router, prefix="/settings", tags=["Settings"])
 api_router.include_router(users_router, prefix="/users", tags=["Users"])

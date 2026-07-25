@@ -246,6 +246,84 @@ async def get_roles(
 
 
 @router.get(
+    "/officers",
+    summary="Get Officers",
+    description="Retrieves officers with district and station details.",
+)
+async def get_officers(
+    request: Request,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    station_id: Optional[str] = Query(None),
+    district_id: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+):
+    try:
+        offset = (page - 1) * size
+        service = AdminService(request, AdminRepository(request))
+        officers = await service.list_officers(limit=size, offset=offset, station_id=station_id, district_id=district_id)
+        return officers
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch officers: {str(e)}"
+        )
+
+
+@router.get(
+    "/districts",
+    summary="Get Districts",
+    description="Retrieves districts with station and officer counts.",
+)
+async def get_districts(
+    request: Request,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+):
+    try:
+        offset = (page - 1) * size
+        service = AdminService(request, AdminRepository(request))
+        districts = await service.list_districts(limit=size, offset=offset)
+        return districts
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch districts: {str(e)}"
+        )
+
+
+@router.get(
+    "/police-stations",
+    summary="Get Police Stations",
+    description="Retrieves police stations with district and officer details.",
+)
+async def get_police_stations(
+    request: Request,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    district_id: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+):
+    try:
+        offset = (page - 1) * size
+        service = AdminService(request, AdminRepository(request))
+        stations = await service.list_police_stations(limit=size, offset=offset, district_id=district_id)
+        return stations
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch police stations: {str(e)}"
+        )
+
+
+@router.get(
     "/statistics",
     response_model=AdminStatistics,
     summary="Get Admin Statistics",

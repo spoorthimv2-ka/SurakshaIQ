@@ -125,6 +125,14 @@ export const router = createBrowserRouter([
                   element: <RoleProtectedRoute roles={MODULE_ROLES['predictive-intelligence']} />,
                   children: [{ path: 'predictive-intelligence', element: lazy(() => import('features/predictive-intelligence/pages/PredictiveIntelligence')) }],
                 },
+                {
+                  element: <RoleProtectedRoute roles={MODULE_ROLES.settings} />,
+                  children: [{ path: 'settings', element: lazy(() => import('features/settings/pages/Settings')) }],
+                },
+                {
+                  element: <RoleProtectedRoute roles={MODULE_ROLES.notifications} />,
+                  children: [{ path: 'notifications', element: lazy(() => import('features/settings/pages/Notifications')) }],
+                },
                {
                  element: <RoleProtectedRoute roles={MODULE_ROLES['ai-reports']} />,
                  children: [{ path: 'ai-reports', element: lazy(() => import('features/ai-reports/pages/AiReports')) }],

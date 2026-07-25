@@ -18,7 +18,9 @@ export type ModuleKey =
   | 'evidence-analyzer'
   | 'timeline'
   | 'ai-reports'
-  | 'predictive-intelligence';
+  | 'predictive-intelligence'
+  | 'settings'
+  | 'notifications';
 
 export interface NavItem {
   module: ModuleKey;
@@ -44,6 +46,8 @@ export const NAV_ITEMS: NavItem[] = [
   { module: 'evidence-analyzer', label: 'Evidence Analyzer', path: '/evidence-analyzer' },
   { module: 'timeline', label: 'Timeline', path: '/timeline' },
   { module: 'ai-reports', label: 'AI Reports', path: '/ai-reports' },
+  { module: 'settings', label: 'Settings', path: '/settings' },
+  { module: 'notifications', label: 'Notifications', path: '/notifications' },
 ];
 
 export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
@@ -177,6 +181,24 @@ export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
     'SYSTEM_ADMINISTRATOR',
   ],
   'ai-reports': [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  settings: [
+    'STATE_COMMAND',
+    'RANGE_IG',
+    'DISTRICT_SP',
+    'STATION_HOUSE_OFFICER',
+    'INVESTIGATING_OFFICER',
+    'CID_ANALYST',
+    'SYSTEM_ADMINISTRATOR',
+  ],
+  notifications: [
     'STATE_COMMAND',
     'RANGE_IG',
     'DISTRICT_SP',

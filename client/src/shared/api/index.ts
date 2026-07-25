@@ -12,7 +12,6 @@ export type {
   CursorPaginationParams,
 } from './pagination';
 
-
 export { authApi } from './authApi';
 export { hotspotsApi } from './hotspotsApi';
 export type { Hotspot, DistrictHotspot, StationHotspot, HotspotSummary, HotspotFilters } from './hotspotsApi';
@@ -60,8 +59,31 @@ export type {
   PredictiveDashboard,
   PredictiveAIExplanation,
 } from './predictiveApi';
+export { settingsApi } from './settingsApi';
+export type {
+  UserSettings,
+  SystemSettings,
+  Notification,
+  NotificationSummary,
+  ExportRequest,
+  ExportResponse,
+  AIReportRequest,
+  AIReportResponse,
+} from './settingsApi';
 export { adminApi } from './adminApi';
-export type { AdminUser, AdminUserCreate, AdminUserUpdate, RoleInfo, AdminStatistics, AuditLog, UserFilters } from './adminApi';
+export type {
+  AdminUser,
+  AdminUserCreate,
+  AdminUserUpdate,
+  RoleInfo,
+  AdminStatistics,
+  AuditLog,
+  UserFilters,
+  AdminOfficer,
+  AdminDistrict,
+  AdminPoliceStation,
+  AuditLogFilters,
+} from './adminApi';
 export { dashboardApi } from './dashboardApi';
 export type { DashboardSummary, SummaryResponse, RecentCrimeResponse, RecentFirResponse, CrimeTrendResponse, DistrictSummaryResponse, DashboardFilters } from './dashboardApi';
 export { crimesApi } from './crimesApi';

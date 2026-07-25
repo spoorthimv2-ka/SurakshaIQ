@@ -61,6 +61,51 @@ export interface UserFilters {
   offset?: number;
 }
 
+export interface AuditLogFilters {
+  action?: string;
+  user?: string;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminOfficer {
+  officer_id: string;
+  name: string;
+  email: string;
+  rank?: string;
+  designation?: string;
+  role: string;
+  district?: string;
+  station?: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+  performance_summary?: Record<string, any>;
+}
+
+export interface AdminDistrict {
+  district_id: string;
+  district_name: string;
+  officer_count: number;
+  police_station_count: number;
+  statistics?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AdminPoliceStation {
+  station_id: string;
+  station_name: string;
+  district_id: string;
+  district_name: string;
+  officer_count: number;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const adminApi = {
   users: {
     list: (filters?: UserFilters) =>
@@ -90,13 +135,28 @@ export const adminApi = {
       apiClient.get<RoleInfo[]>('/admin/roles'),
   },
 
+  officers: {
+    list: (filters?: { limit?: number; offset?: number; station_id?: string; district_id?: string }) =>
+      apiClient.get<AdminOfficer[]>('/admin/officers', { params: filters }),
+  },
+
+  districts: {
+    list: (filters?: { limit?: number; offset?: number }) =>
+      apiClient.get<AdminDistrict[]>('/admin/districts', { params: filters }),
+  },
+
+  policeStations: {
+    list: (filters?: { limit?: number; offset?: number; district_id?: string }) =>
+      apiClient.get<AdminPoliceStation[]>('/admin/police-stations', { params: filters }),
+  },
+
   statistics: {
     get: () =>
       apiClient.get<AdminStatistics>('/admin/statistics'),
   },
 
   auditLogs: {
-    list: (params?: { limit?: number; offset?: number }) =>
-      apiClient.get<AuditLog[]>('/admin/audit-logs', { params }),
+    list: (filters?: AuditLogFilters) =>
+      apiClient.get<AuditLog[]>('/admin/audit-logs', { params: filters }),
   },
 };
