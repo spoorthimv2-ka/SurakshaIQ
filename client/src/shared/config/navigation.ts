@@ -1,6 +1,5 @@
 export {
   NAV_ITEMS,
-  MODULE_ROLES,
   getVisibleNavItems,
   getModuleForPath,
   hasRole,

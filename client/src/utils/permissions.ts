@@ -50,203 +50,129 @@ export const NAV_ITEMS: NavItem[] = [
   { module: 'notifications', label: 'Notifications', path: '/notifications' },
 ];
 
-export const MODULE_ROLES: Record<ModuleKey, UserRole[]> = {
-  dashboard: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
+const TIER_PERMISSIONS: Record<string, string[]> = {
+  OFFICER: [
+    'access_dashboard',
+    'access_fir_management',
+    'access_alerts',
+    'access_crime_management',
+    'access_repeat_offenders',
+    'access_search',
+    'access_ai_investigation',
+    'access_evidence_analyzer',
+    'access_timeline',
+    'access_ai_reports',
+    'access_settings',
+    'access_notifications',
+    'access_hotspots',
   ],
-  hotspots: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
+  INSPECTOR: [
+    'access_trends',
+    'access_anomalies',
+    'access_network_analysis',
+    'access_risk_scoring',
+    'access_predictive_intelligence',
+    'access_reports',
+    'access_district_analytics',
   ],
-  trends: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
+  DSP: [
+    'access_alert_threshold_config',
   ],
-  anomalies: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
+  SP: [
+    'access_state_analytics',
   ],
-  'repeat-offenders': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  'network-analysis': ['CID_ANALYST', 'SYSTEM_ADMINISTRATOR'],
-  'risk-scoring': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  'predictive-intelligence': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  alerts: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  reports: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  admin: ['SYSTEM_ADMINISTRATOR'],
-  'crime-management': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  'fir-management': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  search: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  'ai-investigation': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  'evidence-analyzer': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  timeline: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  'ai-reports': [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  settings: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
-  ],
-  notifications: [
-    'STATE_COMMAND',
-    'RANGE_IG',
-    'DISTRICT_SP',
-    'STATION_HOUSE_OFFICER',
-    'INVESTIGATING_OFFICER',
-    'CID_ANALYST',
-    'SYSTEM_ADMINISTRATOR',
+  ADMIN: [
+    'access_admin',
+    'access_master_data',
+    'access_user_management',
+    'access_role_assignment',
+    'access_jurisdiction_assignment',
+    'access_system_configuration',
+    'view_pii',
   ],
 };
+
+const ROLE_TIER_MAP: Record<UserRole, string> = {
+  STATION_HOUSE_OFFICER: 'OFFICER',
+  INVESTIGATING_OFFICER: 'OFFICER',
+  CID_ANALYST: 'INSPECTOR',
+  DISTRICT_SP: 'DSP',
+  STATE_COMMAND: 'SP',
+  RANGE_IG: 'SP',
+  SYSTEM_ADMINISTRATOR: 'ADMIN',
+};
+
+function tierForRole(role: UserRole): string {
+  return ROLE_TIER_MAP[role] || 'OFFICER';
+}
+
+function permissionsForTier(tier: string): string[] {
+  const base = TIER_PERMISSIONS[tier] || [];
+  if (tier === 'ADMIN') return base;
+  const higher = ['OFFICER', 'INSPECTOR', 'DSP', 'SP', 'ADMIN'];
+  const idx = higher.indexOf(tier);
+  let inherited: string[] = [];
+  for (let i = 0; i < idx; i++) {
+    inherited = inherited.concat(TIER_PERMISSIONS[higher[i]] || []);
+  }
+  return [...new Set([...base, ...inherited])];
+}
+
+export function hasPermission(officer: Officer | null, permission: string): boolean {
+  if (!officer) return false;
+  const tier = tierForRole(officer.role);
+  const perms = permissionsForTier(tier);
+  return perms.includes(permission);
+}
 
 export function hasRole(officer: Officer | null, ...roles: UserRole[]): boolean {
   if (!officer) return false;
   return roles.includes(officer.role);
 }
 
-export function hasPermission(officer: Officer | null, permission: string): boolean {
-  if (!officer) return false;
-  return officer.permissions.includes(permission);
-}
-
 export function canAccessModule(officer: Officer | null, module: ModuleKey): boolean {
   if (!officer) return false;
-  return MODULE_ROLES[module].includes(officer.role);
+  const permissionMap: Record<ModuleKey, string> = {
+    dashboard: 'access_dashboard',
+    hotspots: 'access_hotspots',
+    trends: 'access_trends',
+    anomalies: 'access_anomalies',
+    'repeat-offenders': 'access_repeat_offenders',
+    'network-analysis': 'access_network_analysis',
+    'risk-scoring': 'access_risk_scoring',
+    'predictive-intelligence': 'access_predictive_intelligence',
+    alerts: 'access_alerts',
+    reports: 'access_reports',
+    admin: 'access_admin',
+    'crime-management': 'access_crime_management',
+    'fir-management': 'access_fir_management',
+    search: 'access_search',
+    'ai-investigation': 'access_ai_investigation',
+    'evidence-analyzer': 'access_evidence_analyzer',
+    timeline: 'access_timeline',
+    'ai-reports': 'access_ai_reports',
+    settings: 'access_settings',
+    notifications: 'access_notifications',
+  };
+  const required = permissionMap[module];
+  if (!required) return false;
+  return hasPermission(officer, required);
 }
 
 export function canViewDistrict(officer: Officer | null, districtId: string): boolean {
   if (!officer) return false;
-
   const { role, jurisdiction } = officer;
-
-  if (
-    role === 'STATE_COMMAND' ||
-    role === 'RANGE_IG' ||
-    role === 'CID_ANALYST' ||
-    role === 'SYSTEM_ADMINISTRATOR'
-  ) {
+  if (['SYSTEM_ADMINISTRATOR', 'STATE_COMMAND', 'RANGE_IG', 'CID_ANALYST'].includes(role)) {
     return true;
   }
-
   if (role === 'DISTRICT_SP') {
     return jurisdiction?.districtId === districtId;
   }
-
   return false;
 }
 
 export function canManageUsers(officer: Officer | null): boolean {
-  return hasRole(officer, 'SYSTEM_ADMINISTRATOR') || hasPermission(officer, 'MANAGE_USERS');
+  return hasPermission(officer, 'access_user_management');
 }
 
 export function getVisibleNavItems(officer: Officer | null): NavItem[] {
@@ -257,3 +183,4 @@ export function getModuleForPath(pathname: string): ModuleKey | null {
   const match = NAV_ITEMS.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
   return match?.module ?? null;
 }
+

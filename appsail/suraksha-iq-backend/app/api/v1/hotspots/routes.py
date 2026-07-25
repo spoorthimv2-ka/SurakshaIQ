@@ -2,7 +2,8 @@ from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status a
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.hotspot_service import HotspotService
 from app.schemas.hotspot import (
     HotspotResponse,
@@ -29,13 +30,13 @@ async def get_hotspots(
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
     limit: int = Query(100, ge=1, le=500),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_HOTSPOTS])),
 ):
     """Retrieves hotspot data from Catalyst Data Store."""
     try:
         service = HotspotService(request)
         hotspots = await service.get_hotspots(
-            current_user,
+            current_officer,
             district_id=district_id,
             station_id=station_id,
             crime_type=crime_type,
@@ -64,12 +65,12 @@ async def get_district_hotspots(
     request: Request,
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_HOTSPOTS])),
 ):
     """Retrieves district hotspot summary from Catalyst Data Store."""
     try:
         service = HotspotService(request)
-        hotspots = await service.get_district_hotspots(current_user, start_date=start_date, end_date=end_date)
+        hotspots = await service.get_district_hotspots(current_officer, start_date=start_date, end_date=end_date)
         return hotspots
     except HTTPException:
         raise
@@ -90,12 +91,12 @@ async def get_station_hotspots(
     request: Request,
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_HOTSPOTS])),
 ):
     """Retrieves station hotspot summary from Catalyst Data Store."""
     try:
         service = HotspotService(request)
-        hotspots = await service.get_station_hotspots(current_user, start_date=start_date, end_date=end_date)
+        hotspots = await service.get_station_hotspots(current_officer, start_date=start_date, end_date=end_date)
         return hotspots
     except HTTPException:
         raise
@@ -121,12 +122,12 @@ async def get_top_hotspots(
     station_id: Optional[str] = Query(None, description="Filter by police station ID"),
     crime_type: Optional[str] = Query(None, description="Filter by crime type"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_HOTSPOTS])),
 ):
     """Retrieves top hotspots from Catalyst Data Store."""
     try:
         service = HotspotService(request)
-        hotspots = await service.get_top_hotspots(current_user, limit=limit, start_date=start_date, end_date=end_date, district_id=district_id, station_id=station_id, crime_type=crime_type, status=status)
+        hotspots = await service.get_top_hotspots(current_officer, limit=limit, start_date=start_date, end_date=end_date, district_id=district_id, station_id=station_id, crime_type=crime_type, status=status)
         return hotspots
     except HTTPException:
         raise

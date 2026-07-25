@@ -1,9 +1,11 @@
 import React, { Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout, AuthLayout, AppShellLayout, DashboardLayout } from 'app/layouts';
-import { ProtectedRoute, RoleProtectedRoute } from 'routes';
+import { ProtectedRoute } from 'routes';
 import { LoadingSkeleton } from 'shared/components';
-import { MODULE_ROLES } from 'utils/permissions';
+import { canAccessModule, type ModuleKey } from 'utils/permissions';
+import { useAuth } from 'hooks/useAuth';
+import { Outlet } from 'react-router-dom';
 
 const LoadingState = () => (
   <div className="flex min-h-screen items-center justify-center">
@@ -19,6 +21,14 @@ const lazy = (factory: () => Promise<{ default: React.ComponentType }>) => {
     </Suspense>
   );
 };
+
+function PermissionRoute({ module }: { module: ModuleKey }) {
+  const { user } = useAuth();
+  if (!canAccessModule(user, module)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  return <Outlet />;
+}
 
 export const router = createBrowserRouter([
   {
@@ -38,7 +48,7 @@ export const router = createBrowserRouter([
             element: <AppShellLayout />,
             children: [
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES.dashboard} />,
+                element: <PermissionRoute module="dashboard" />,
                 children: [
                   {
                     path: 'dashboard',
@@ -50,19 +60,19 @@ export const router = createBrowserRouter([
                 ],
               },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES.hotspots} />,
+                element: <PermissionRoute module="hotspots" />,
                 children: [{ path: 'hotspots', element: lazy(() => import('features/hotspots/pages/Hotspots')) }],
               },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES.trends} />,
+                element: <PermissionRoute module="trends" />,
                 children: [{ path: 'trends', element: lazy(() => import('features/trends/pages/Trends')) }],
               },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES.anomalies} />,
+                element: <PermissionRoute module="anomalies" />,
                 children: [{ path: 'anomalies', element: lazy(() => import('features/anomalies/pages/Anomalies')) }],
               },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES['repeat-offenders']} />,
+                element: <PermissionRoute module="repeat-offenders" />,
                 children: [
                   {
                     path: 'repeat-offenders',
@@ -71,7 +81,7 @@ export const router = createBrowserRouter([
                 ],
               },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES['network-analysis']} />,
+                element: <PermissionRoute module="network-analysis" />,
                 children: [
                   {
                     path: 'network-analysis',
@@ -80,65 +90,65 @@ export const router = createBrowserRouter([
                 ],
               },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES['risk-scoring']} />,
+                element: <PermissionRoute module="risk-scoring" />,
                 children: [
                   { path: 'risk-scoring', element: lazy(() => import('features/risk-scoring/pages/RiskScoring')) },
                 ],
               },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES.alerts} />,
+                 element: <PermissionRoute module="alerts" />,
                  children: [{ path: 'alerts', element: lazy(() => import('features/alerts/pages/Alerts')) }],
                },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES.reports} />,
+                 element: <PermissionRoute module="reports" />,
                  children: [{ path: 'reports', element: lazy(() => import('features/reports/pages/Reports')) }],
                },
                {
                  path: 'search',
                  element: lazy(() => import('features/search/pages/Search')),
                },
-               {
-                  element: <RoleProtectedRoute roles={MODULE_ROLES.admin} />,
-                  children: [{ path: 'admin', element: lazy(() => import('features/admin/pages/Admin')) }],
-                },
                 {
-                  element: <RoleProtectedRoute roles={MODULE_ROLES.timeline} />,
-                  children: [{ path: 'timeline', element: lazy(() => import('features/timeline/pages/Timeline')) }],
-                },
+                   element: <PermissionRoute module="admin" />,
+                   children: [{ path: 'admin', element: lazy(() => import('features/admin/pages/Admin')) }],
+                 },
+                 {
+                   element: <PermissionRoute module="timeline" />,
+                   children: [{ path: 'timeline', element: lazy(() => import('features/timeline/pages/Timeline')) }],
+                 },
               {
-                element: <RoleProtectedRoute roles={MODULE_ROLES['crime-management']} />,
+                element: <PermissionRoute module="crime-management" />,
                 children: [{ path: 'crimes', element: lazy(() => import('features/crime-management/pages/CrimeManagement')) }],
               },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES['fir-management']} />,
+                 element: <PermissionRoute module="fir-management" />,
                  children: [{ path: 'firs', element: lazy(() => import('features/fir-management/pages/FirManagement')) }],
                },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES['ai-investigation']} />,
+                 element: <PermissionRoute module="ai-investigation" />,
                  children: [{ path: 'ai-investigation', element: lazy(() => import('features/ai-investigation/pages/AiInvestigation')) }],
                },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES['evidence-analyzer']} />,
+                 element: <PermissionRoute module="evidence-analyzer" />,
                  children: [{ path: 'evidence-analyzer', element: lazy(() => import('features/evidence-analyzer/pages/EvidenceAnalyzer')) }],
                },
                 {
-                  element: <RoleProtectedRoute roles={MODULE_ROLES['risk-scoring']} />,
+                  element: <PermissionRoute module="risk-scoring" />,
                   children: [{ path: 'risk-scoring', element: lazy(() => import('features/risk-scoring/pages/RiskScoring')) }],
                 },
                 {
-                  element: <RoleProtectedRoute roles={MODULE_ROLES['predictive-intelligence']} />,
+                  element: <PermissionRoute module="predictive-intelligence" />,
                   children: [{ path: 'predictive-intelligence', element: lazy(() => import('features/predictive-intelligence/pages/PredictiveIntelligence')) }],
                 },
                 {
-                  element: <RoleProtectedRoute roles={MODULE_ROLES.settings} />,
+                  element: <PermissionRoute module="settings" />,
                   children: [{ path: 'settings', element: lazy(() => import('features/settings/pages/Settings')) }],
                 },
                 {
-                  element: <RoleProtectedRoute roles={MODULE_ROLES.notifications} />,
+                  element: <PermissionRoute module="notifications" />,
                   children: [{ path: 'notifications', element: lazy(() => import('features/settings/pages/Notifications')) }],
                 },
                {
-                 element: <RoleProtectedRoute roles={MODULE_ROLES['ai-reports']} />,
+                 element: <PermissionRoute module="ai-reports" />,
                  children: [{ path: 'ai-reports', element: lazy(() => import('features/ai-reports/pages/AiReports')) }],
                },
                {

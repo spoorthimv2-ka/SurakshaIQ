@@ -12,6 +12,8 @@ function mapBackendOfficerToOfficer(data: Record<string, unknown>): Officer {
   const role = String(data.role || 'STATION_HOUSE_OFFICER') as UserRole;
   const permissions = Array.isArray(data.permissions) ? data.permissions.map(String) : [];
   const stationId = data.station_id ? String(data.station_id) : undefined;
+  const districtId = data.district_id ? String(data.district_id) : undefined;
+  const jurisdictionType = String(data.jurisdiction_type || 'STATION') as 'STATION' | 'DISTRICT' | 'STATE';
 
   return {
     id: String(data.ROWID || data.id || ''),
@@ -20,11 +22,15 @@ function mapBackendOfficerToOfficer(data: Record<string, unknown>): Officer {
     rank: '',
     designation: '',
     role,
-    jurisdiction: stationId ? { type: 'STATION', stationId } : { type: 'STATION' },
+    jurisdiction: { type: jurisdictionType, stationId, districtId },
     permissions,
     ROWID: data.ROWID ? String(data.ROWID) : undefined,
     user_id: data.user_id ? String(data.user_id) : undefined,
     station_id: stationId,
+    district_id: districtId,
+    badge_number: data.badge_number ? String(data.badge_number) : undefined,
+    state_access: data.state_access === true,
+    token_version: data.token_version ? Number(data.token_version) : 1,
   };
 }
 
@@ -66,8 +72,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshSession();
   }, [refreshSession]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const response = await authService.login(email, password);
+  const login = useCallback(async (badge_number: string, password: string) => {
+    const response = await authService.login(badge_number, password);
     const mapped = mapBackendOfficerToOfficer(response.officer);
     setUser(mapped);
     setToken(response.access_token);

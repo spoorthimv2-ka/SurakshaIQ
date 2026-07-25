@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.repositories.alert_repo import AlertRepository
 from app.services.alert_service import AlertService
 from app.schemas.alert import AlertResponse, AlertSummary
@@ -23,12 +24,12 @@ async def get_alerts(
     station_id: Optional[str] = Query(None, description="Filter by police station ID"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ALERTS])),
 ):
     """Retrieves alerts scoped by jurisdiction."""
     try:
         service = AlertService(request, AlertRepository(request))
-        alerts = await service.get_alerts(status_filter=status_filter, severity=severity, district_id=district_id, station_id=station_id, limit=limit, offset=offset)
+        alerts = await service.get_alerts(officer=current_officer, status_filter=status_filter, severity=severity, district_id=district_id, station_id=station_id, limit=limit, offset=offset)
         return [AlertResponse.model_validate(a) for a in alerts]
     except HTTPException:
         raise
@@ -47,7 +48,7 @@ async def get_alerts(
 )
 async def get_alert_summary(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ALERTS])),
 ):
     """Retrieves alert summary from Catalyst Data Store."""
     try:
@@ -77,12 +78,12 @@ async def get_active_alerts(
     station_id: Optional[str] = Query(None, description="Filter by police station ID"),
     status_filter: Optional[str] = Query(None, description="Filter by status"),
     severity: Optional[str] = Query(None, description="Filter by severity"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ALERTS])),
 ):
     """Retrieves active alerts from Catalyst Data Store."""
     try:
         service = AlertService(request, AlertRepository(request))
-        alerts = await service.get_active_alerts(limit=limit, offset=offset, district_id=district_id, station_id=station_id, status_filter=status_filter, severity=severity)
+        alerts = await service.get_active_alerts(officer=current_officer, limit=limit, offset=offset, district_id=district_id, station_id=station_id, status_filter=status_filter, severity=severity)
         return [AlertResponse.model_validate(a) for a in alerts]
     except HTTPException:
         raise
@@ -102,7 +103,7 @@ async def get_active_alerts(
 async def get_alert(
     request: Request,
     alert_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ALERTS])),
 ):
     """Retrieves an alert by ID."""
     try:
@@ -129,7 +130,7 @@ async def get_alert(
 async def acknowledge_alert(
     request: Request,
     alert_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ALERTS])),
 ):
     """Acknowledges an alert."""
     try:
@@ -154,7 +155,7 @@ async def acknowledge_alert(
 async def resolve_alert(
     request: Request,
     alert_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ALERTS])),
 ):
     """Resolves an alert."""
     try:

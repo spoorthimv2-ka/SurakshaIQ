@@ -1,13 +1,13 @@
 export type UserRole =
-  | 'STATE_COMMAND'
-  | 'RANGE_IG'
-  | 'DISTRICT_SP'
   | 'STATION_HOUSE_OFFICER'
   | 'INVESTIGATING_OFFICER'
   | 'CID_ANALYST'
+  | 'DISTRICT_SP'
+  | 'STATE_COMMAND'
+  | 'RANGE_IG'
   | 'SYSTEM_ADMINISTRATOR';
 
-export type Jurisdiction = 'STATE' | 'RANGE' | 'DISTRICT' | 'STATION';
+export type Jurisdiction = 'STATION' | 'DISTRICT' | 'STATE';
 
 export interface Officer {
   id: string;
@@ -26,6 +26,10 @@ export interface Officer {
   ROWID?: string;
   user_id?: string;
   station_id?: string;
+  district_id?: string;
+  badge_number?: string;
+  state_access?: boolean;
+  token_version?: number;
 }
 
 export interface AuthContextType {
@@ -33,7 +37,7 @@ export interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (badge_number: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -41,12 +45,12 @@ export interface AuthContextType {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  STATE_COMMAND: 'State Command (DGP)',
-  RANGE_IG: 'Range IG',
-  DISTRICT_SP: 'District SP',
   STATION_HOUSE_OFFICER: 'Station House Officer',
   INVESTIGATING_OFFICER: 'Investigating Officer',
   CID_ANALYST: 'CID Analyst',
+  DISTRICT_SP: 'District SP',
+  STATE_COMMAND: 'State Command (DGP)',
+  RANGE_IG: 'Range IG',
   SYSTEM_ADMINISTRATOR: 'System Administrator',
 };
 

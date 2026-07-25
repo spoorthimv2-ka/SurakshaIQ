@@ -1,7 +1,7 @@
 import { apiClient } from './api';
 
 export interface LoginRequest {
-  email: string;
+  badge_number: string;
   password: string;
 }
 
@@ -43,8 +43,8 @@ function clearStoredSession(): void {
 }
 
 export const authService = {
-  async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>('/auth/login', { email, password });
+  async login(badge_number: string, password: string): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/auth/login', { badge_number, password });
     const { access_token, officer } = response.data;
     setStoredSession(access_token, officer);
     return response.data;

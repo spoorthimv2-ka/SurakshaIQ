@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.predictive_risk_service import PredictiveRiskService
 from app.schemas.risk import (
     RiskPrediction,
@@ -22,12 +23,12 @@ router = APIRouter()
 async def get_risk_predictions(
     request: Request,
     limit: int = Query(100, ge=1, le=500),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_RISK_SCORING])),
 ):
     """Retrieves risk predictions from Catalyst Data Store."""
     try:
         service = PredictiveRiskService(request)
-        predictions = await service.get_predictions(current_user, limit=limit)
+        predictions = await service.get_predictions(current_officer, limit=limit)
         return predictions
     except HTTPException:
         raise
@@ -46,12 +47,12 @@ async def get_risk_predictions(
 )
 async def get_risk_summary(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_RISK_SCORING])),
 ):
     """Retrieves risk summary from Catalyst Data Store."""
     try:
         service = PredictiveRiskService(request)
-        summary = await service.get_summary(current_user)
+        summary = await service.get_summary(current_officer)
         return summary
     except HTTPException:
         raise
@@ -70,12 +71,12 @@ async def get_risk_summary(
 )
 async def get_district_risk(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_RISK_SCORING])),
 ):
     """Retrieves district risk from Catalyst Data Store."""
     try:
         service = PredictiveRiskService(request)
-        districts = await service.get_district_predictions(current_user)
+        districts = await service.get_district_predictions(current_officer)
         return districts
     except HTTPException:
         raise
@@ -94,12 +95,12 @@ async def get_district_risk(
 )
 async def get_station_risk(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_RISK_SCORING])),
 ):
     """Retrieves station risk from Catalyst Data Store."""
     try:
         service = PredictiveRiskService(request)
-        stations = await service.get_station_predictions(current_user)
+        stations = await service.get_station_predictions(current_officer)
         return stations
     except HTTPException:
         raise
@@ -120,12 +121,12 @@ async def get_entity_risk(
     request: Request,
     entity_id: str,
     entity_type: str = Query("District", description="Entity type: District or PoliceStation"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_RISK_SCORING])),
 ):
     """Retrieves entity risk from Catalyst Data Store."""
     try:
         service = PredictiveRiskService(request)
-        prediction = await service.get_entity_prediction(current_user, entity_id, entity_type)
+        prediction = await service.get_entity_prediction(current_officer, entity_id, entity_type)
         if not prediction:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

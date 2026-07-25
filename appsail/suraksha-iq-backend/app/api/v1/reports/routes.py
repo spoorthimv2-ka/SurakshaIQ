@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.repositories.report_repo import ReportRepository
 from app.services.report_service import ReportService
 from app.schemas.report import ReportResponse, ReportSummaryResponse, ReportStatistics, ReportTypeInfo, ReportRequest
@@ -20,7 +21,7 @@ async def get_reports(
     request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPORTS])),
 ):
     """Retrieves reports from Catalyst Data Store."""
     try:
@@ -43,7 +44,7 @@ async def get_reports(
 )
 async def get_report_summary(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPORTS])),
 ):
     """Retrieves report summary from Catalyst Data Store."""
     try:
@@ -65,7 +66,7 @@ async def get_report_summary(
 )
 async def get_report_types(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPORTS])),
 ):
     """Retrieves available report types."""
     try:
@@ -88,7 +89,7 @@ async def get_report_types(
 async def get_report_details(
     request: Request,
     report_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPORTS])),
 ):
     """Retrieves report details from Catalyst Data Store."""
     try:
@@ -116,11 +117,11 @@ async def get_report_details(
 async def generate_report(
     request: Request,
     report_request: ReportRequest,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPORTS])),
 ):
     """Generates a new report deterministically from existing data."""
     try:
-        officer_id = current_user.get("ROWID", current_user.get("id", ""))
+        officer_id = current_officer.get("ROWID", current_officer.get("id", ""))
         service = ReportService(request, ReportRepository(request))
         result = await service.generate_report(
             report_type=report_request.report_type.value,
@@ -145,7 +146,7 @@ async def generate_report(
 async def delete_report(
     request: Request,
     report_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPORTS])),
 ):
     """Deletes a report from Catalyst Data Store."""
     try:

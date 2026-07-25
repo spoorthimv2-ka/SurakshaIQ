@@ -2,7 +2,8 @@ from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.repeat_offender_service import RepeatOffenderService
 from app.schemas.repeat_offender import (
     RepeatOffenderResponse,
@@ -31,13 +32,13 @@ async def get_repeat_offenders(
     include_heuristic: bool = Query(False, description="Include district-proximity heuristic matching"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPEAT_OFFENDERS])),
 ):
     """Retrieves repeat offenders from Catalyst Data Store."""
     try:
         service = RepeatOffenderService(request)
         offenders = await service.get_repeat_offenders(
-            current_user,
+            current_officer,
             district_id=district_id,
             station_id=station_id,
             crime_type=crime_type,
@@ -70,13 +71,13 @@ async def get_top_repeat_offenders(
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
     include_heuristic: bool = Query(False, description="Include district-proximity heuristic matching"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPEAT_OFFENDERS])),
 ):
     """Retrieves top repeat offenders from Catalyst Data Store."""
     try:
         service = RepeatOffenderService(request)
         offenders = await service.get_top_repeat_offenders(
-            current_user,
+            current_officer,
             limit=limit,
             start_date=start_date,
             end_date=end_date,
@@ -103,12 +104,12 @@ async def get_repeat_offender_statistics(
     start_date: Optional[datetime] = Query(None, description="Start date (UTC)"),
     end_date: Optional[datetime] = Query(None, description="End date (UTC)"),
     include_heuristic: bool = Query(False, description="Include district-proximity heuristic matching"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPEAT_OFFENDERS])),
 ):
     """Retrieves repeat offender statistics from Catalyst Data Store."""
     try:
         service = RepeatOffenderService(request)
-        stats = await service.get_statistics(current_user, start_date=start_date, end_date=end_date, include_heuristic=include_heuristic)
+        stats = await service.get_statistics(current_officer, start_date=start_date, end_date=end_date, include_heuristic=include_heuristic)
         return stats
     except HTTPException:
         raise
@@ -129,12 +130,12 @@ async def get_offender_details(
     request: Request,
     offender_id: str,
     include_heuristic: bool = Query(False, description="Include district-proximity heuristic matching"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_REPEAT_OFFENDERS])),
 ):
     """Retrieves offender details from Catalyst Data Store."""
     try:
         service = RepeatOffenderService(request)
-        detail = await service.get_offender_details(current_user, offender_id, include_heuristic=include_heuristic)
+        detail = await service.get_offender_details(current_officer, offender_id, include_heuristic=include_heuristic)
         if not detail:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

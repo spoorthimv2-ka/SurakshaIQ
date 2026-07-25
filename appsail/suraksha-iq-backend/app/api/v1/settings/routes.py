@@ -1,7 +1,8 @@
 from fastapi import Request, APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.settings_service import SettingsService
 from app.schemas.settings import (
     UserSettings,
@@ -25,11 +26,11 @@ router = APIRouter()
 )
 async def get_user_settings(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        settings = await service.get_user_settings(current_user)
+        settings = await service.get_user_settings(current_officer)
         return settings
     except HTTPException:
         raise
@@ -46,11 +47,11 @@ async def get_user_settings(
 async def update_user_settings(
     request: Request,
     data: Dict[str, Any],
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        settings = await service.update_user_settings(current_user, data)
+        settings = await service.update_user_settings(current_officer, data)
         return settings
     except HTTPException:
         raise
@@ -66,7 +67,7 @@ async def update_user_settings(
 )
 async def get_system_settings(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
@@ -87,11 +88,11 @@ async def get_system_settings(
 async def get_notifications(
     request: Request,
     unread_only: bool = Query(False),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        notifications = await service.get_notifications(current_user, unread_only=unread_only)
+        notifications = await service.get_notifications(current_officer, unread_only=unread_only)
         return notifications
     except HTTPException:
         raise
@@ -107,11 +108,11 @@ async def get_notifications(
 )
 async def get_notification_summary(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        summary = await service.get_notification_summary(current_user)
+        summary = await service.get_notification_summary(current_officer)
         return summary
     except HTTPException:
         raise
@@ -127,11 +128,11 @@ async def get_notification_summary(
 async def mark_notification_read(
     request: Request,
     notification_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        result = await service.mark_notification_read(current_user, notification_id)
+        result = await service.mark_notification_read(current_officer, notification_id)
         return result
     except HTTPException:
         raise
@@ -147,11 +148,11 @@ async def mark_notification_read(
 async def dismiss_notification(
     request: Request,
     notification_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        result = await service.dismiss_notification(current_user, notification_id)
+        result = await service.dismiss_notification(current_officer, notification_id)
         return result
     except HTTPException:
         raise
@@ -166,11 +167,11 @@ async def dismiss_notification(
 )
 async def clear_all_notifications(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        result = await service.clear_all_notifications(current_user)
+        result = await service.clear_all_notifications(current_officer)
         return result
     except HTTPException:
         raise
@@ -187,11 +188,11 @@ async def clear_all_notifications(
 async def export_data(
     request: Request,
     export_request: ExportRequest,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        result = await service.export_data(current_user, export_request)
+        result = await service.export_data(current_officer, export_request)
         return result
     except HTTPException:
         raise
@@ -208,11 +209,11 @@ async def export_data(
 async def generate_ai_report(
     request: Request,
     report_request: AIReportRequest,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SETTINGS])),
 ):
     try:
         service = SettingsService(request)
-        result = await service.generate_ai_report(current_user, report_request)
+        result = await service.generate_ai_report(current_officer, report_request)
         return result
     except HTTPException:
         raise

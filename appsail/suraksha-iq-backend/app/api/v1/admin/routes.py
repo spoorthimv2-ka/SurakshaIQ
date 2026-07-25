@@ -22,7 +22,7 @@ async def get_users(
     size: int = Query(20, ge=1, le=100),
     role: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Retrieves users from Catalyst Data Store."""
     try:
@@ -48,7 +48,7 @@ async def get_users(
 async def get_user(
     request: Request,
     user_id: str,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Retrieves user details from Catalyst Data Store."""
     try:
@@ -75,7 +75,7 @@ async def get_user(
 async def create_user(
     request: Request,
     user_data: AdminUserCreate,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Creates a new user."""
     try:
@@ -107,7 +107,7 @@ async def update_user(
     request: Request,
     user_id: str,
     user_data: AdminUserUpdate,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Updates a user."""
     try:
@@ -137,7 +137,7 @@ async def update_user(
 async def delete_user(
     request: Request,
     user_id: str,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Deletes a user."""
     try:
@@ -168,7 +168,7 @@ async def delete_user(
 async def activate_user(
     request: Request,
     user_id: str,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Activates a user."""
     try:
@@ -199,7 +199,7 @@ async def activate_user(
 async def deactivate_user(
     request: Request,
     user_id: str,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Deactivates a user."""
     try:
@@ -229,7 +229,7 @@ async def deactivate_user(
 )
 async def get_roles(
     request: Request,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_ROLES])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ROLE_ASSIGNMENT])),
 ):
     """Retrieves available roles."""
     try:
@@ -256,7 +256,7 @@ async def get_officers(
     size: int = Query(20, ge=1, le=100),
     station_id: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     try:
         offset = (page - 1) * size
@@ -281,7 +281,7 @@ async def get_districts(
     request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     try:
         offset = (page - 1) * size
@@ -307,7 +307,7 @@ async def get_police_stations(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     district_id: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     try:
         offset = (page - 1) * size
@@ -331,7 +331,7 @@ async def get_police_stations(
 )
 async def get_statistics(
     request: Request,
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Retrieves admin statistics."""
     try:
@@ -357,7 +357,7 @@ async def get_audit_logs(
     request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=100),
-    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.MANAGE_USERS])),
+    current_user: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_USER_MANAGEMENT])),
 ):
     """Retrieves audit logs."""
     try:

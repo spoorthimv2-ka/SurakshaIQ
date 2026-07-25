@@ -1,0 +1,109 @@
+{
+  "name" : "project-template",
+  "version" : "1.0.0",
+  "parameters" : { },
+  "components" : {
+    "Pipelines" : [ ],
+    "ApplicationAlerts" : [ ],
+    "Stratus" : [ ],
+    "Functions" : [ ],
+    "Add-onServices" : [ ],
+    "WebClient" : [ {
+      "type" : "client",
+      "name" : "suraksha-iq-client",
+      "properties" : {
+        "app_name" : "suraksha-iq-client",
+        "modified_time" : "Jul 23, 2026 11:51 PM",
+        "code" : {
+          "path" : "webclient/suraksha-iq-client.zip"
+        }
+      },
+      "dependsOn" : [ ]
+    } ],
+    "Cron" : [ ],
+    "SchedulingJobpool" : [ ],
+    "Filestore" : [ ],
+    "Mail" : [ ],
+    "Zia" : [ ],
+    "Datastore" : [ ],
+    "Authentication" : [ {
+      "type" : "emailTemplates",
+      "name" : "1",
+      "properties" : {
+        "subject" : "Welcome to %APP_NAME%",
+        "template_type" : 1,
+        "message" : "<p>Hello %FIRST_NAME% %LAST_NAME%,</p>\n<p>You have been invited to join %APP_NAME%. You can access the app from this link:</p>\n<p><a href='%LINK%'>%LINK%</a></p>\n<p>You are assigned to the role %ROLE_NAME% in this app.</p>\n<p>If you didn’t ask to join the application or if you think this was a mistake, you can ignore this email.</p>\n<p>Thanks,</p>\n<p>%APP_NAME% team</p>\n"
+      },
+      "dependsOn" : [ ]
+    }, {
+      "type" : "emailTemplates",
+      "name" : "2",
+      "properties" : {
+        "subject" : "Password Reset for %APP_NAME%",
+        "template_type" : 2,
+        "message" : "<p>Hello %FIRST_NAME% %LAST_NAME%,</p>\n<p>Follow this link to reset your %APP_NAME% password for your %EMAIL% account.</p>\n<p><a href='%LINK%'>%LINK%</a></p>\n<p>If you didn't ask to reset your password, you can ignore this email.</p>\n<p>Thanks,</p>\n<p>Your %APP_NAME% team</p>"
+      },
+      "dependsOn" : [ ]
+    }, {
+      "type" : "roles",
+      "name" : "App Administrator",
+      "properties" : {
+        "role_name" : "App Administrator",
+        "description" : "Admin Role for the application",
+        "type" : "App Administrator",
+        "is_default" : false
+      },
+      "dependsOn" : [ "Authentication.roles.App User" ]
+    }, {
+      "type" : "roles",
+      "name" : "App User",
+      "properties" : {
+        "role_name" : "App User",
+        "description" : "User Role for the application",
+        "type" : "App User",
+        "is_default" : true
+      },
+      "dependsOn" : [ ]
+    }, {
+      "type" : "SignupConfiguration",
+      "name" : "signup-configuration",
+      "properties" : {
+        "app_account_meta" : { },
+        "custom_validation" : false,
+        "public_signup" : false,
+        "status" : {
+          "embedded_auth" : false,
+          "third_party_auth" : false,
+          "hosted_auth" : false
+        }
+      },
+      "dependsOn" : [ ]
+    }, {
+      "type" : "HostedLogin",
+      "name" : "hosted-login",
+      "properties" : {
+        "config" : {
+          "is_logo_present" : false,
+          "company_name" : "",
+          "colors" : {
+            "background_color" : "#dce7ff",
+            "primary_color" : "#0059e9"
+          }
+        }
+      },
+      "dependsOn" : [ ]
+    } ],
+    "AppSail" : [ ],
+    "SecurityRules" : [ ],
+    "EventListeners" : [ ],
+    "SchedulingCron" : [ ],
+    "Cache" : [ {
+      "type" : "segment",
+      "name" : "Default",
+      "properties" : {
+        "segment_name" : "Default"
+      },
+      "dependsOn" : [ ]
+    } ]
+  }
+}

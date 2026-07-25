@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.repositories.fir_repo import FIRRepository
 from app.services.fir_service import FIRService
 from app.schemas.fir import FIRCreate, FIRUpdate, FIRResponse
@@ -28,7 +29,7 @@ async def get_firs(
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by status"),
     date_from: Optional[str] = Query(None, description="Start date (ISO format)"),
     date_to: Optional[str] = Query(None, description="End date (ISO format)"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_FIR_MANAGEMENT])),
 ):
     """Retrieves FIRs with optional filters."""
     try:
@@ -36,6 +37,7 @@ async def get_firs(
         service = FIRService(request, repo)
 
         firs = await service.find_all_with_filters(
+            officer=current_officer,
             limit=limit,
             offset=offset,
             fir_number=fir_number,
@@ -65,7 +67,7 @@ async def get_firs(
 async def get_fir(
     request: Request,
     fir_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_FIR_MANAGEMENT])),
 ):
     """Retrieves an FIR by ID."""
     try:
@@ -97,7 +99,7 @@ async def get_fir(
 async def create_fir(
     request: Request,
     payload: FIRCreate,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_FIR_MANAGEMENT])),
 ):
     """Creates a new FIR."""
     try:
@@ -129,7 +131,7 @@ async def update_fir(
     request: Request,
     fir_id: str,
     payload: FIRUpdate,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_FIR_MANAGEMENT])),
 ):
     """Updates an existing FIR."""
     try:
@@ -164,7 +166,7 @@ async def update_fir(
 async def delete_fir(
     request: Request,
     fir_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_FIR_MANAGEMENT])),
 ):
     """Deletes an FIR."""
     try:

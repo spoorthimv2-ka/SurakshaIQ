@@ -8,7 +8,8 @@ const Login: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated, loading, login } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [badgeNumber, setBadgeNumber] = useState('');
+  const [badgeError, setBadgeError] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,15 +21,27 @@ const Login: React.FC = () => {
     }
   }, [isAuthenticated, loading, from, navigate]);
 
+  const validateBadgeNumber = (value: string) => {
+    if (!value.trim()) return 'Badge Number is required';
+    if (!/^KSP-[0-9]{6}$/.test(value)) return 'Badge Number must be in the format KSP-123456';
+    return '';
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const validationError = validateBadgeNumber(badgeNumber);
+    if (validationError) {
+      setBadgeError(validationError);
+      return;
+    }
+    setBadgeError('');
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(badgeNumber, password);
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Login failed', error);
-      toast.error('Invalid email or password. Please try again.');
+      toast.error('Invalid badge number or password. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -63,18 +76,28 @@ const Login: React.FC = () => {
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
+          <label htmlFor="badgeNumber" className="block text-sm font-medium text-gray-700">
+            Badge Number
           </label>
           <input
-            id="email"
-            type="email"
+            id="badgeNumber"
+            type="text"
+            inputMode="text"
+            autoComplete="username"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-amber-analytics focus:outline-none focus:ring-1 focus:ring-amber-analytics dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-            placeholder="officer@karnatakapolice.gov.in"
+            value={badgeNumber}
+            onChange={(e) => {
+              setBadgeNumber(e.target.value.toUpperCase());
+              if (badgeError) setBadgeError('');
+            }}
+            className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-amber-analytics dark:bg-gray-800 dark:text-white ${
+              badgeError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-amber-analytics'
+            }`}
+            placeholder="KSP-123456"
           />
+          {badgeError && (
+            <p className="mt-1 text-sm text-red-600">{badgeError}</p>
+          )}
         </div>
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">

@@ -1,7 +1,8 @@
 {
   "functions": {
     "targets": [
-      "suraksha_iq_backend"
+      "suraksha_iq_backend",
+      "system_setup"
     ],
     "ignore": [],
     "source": "functions"

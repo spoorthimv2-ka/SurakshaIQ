@@ -8,6 +8,7 @@ from app.repositories.officer_repo import OfficerRepository
 from app.schemas.enums import EntityStatus
 from app.core.logger import logger
 from app.core.exceptions import DataValidationError
+from app.models.enums import JurisdictionType
 
 class FIRService:
     """Service layer for FIR entity."""
@@ -18,6 +19,21 @@ class FIRService:
         self.district_repo = DistrictRepository(request)
         self.station_repo = PoliceStationRepository(request)
         self.officer_repo = OfficerRepository(request)
+
+    def _apply_jurisdiction(self, officer: Dict[str, Any], district_id: Optional[str] = None, station_id: Optional[str] = None) -> tuple[Optional[str], Optional[str]]:
+        jurisdiction_type = officer.get("jurisdiction_type") or JurisdictionType.STATION.value
+        officer_station = officer.get("station_id")
+        officer_district = officer.get("district_id")
+
+        if jurisdiction_type == JurisdictionType.STATION.value:
+            if not station_id and officer_station:
+                station_id = officer_station
+        elif jurisdiction_type == JurisdictionType.DISTRICT.value:
+            if not district_id and officer_district:
+                district_id = officer_district
+        elif jurisdiction_type == JurisdictionType.STATE.value:
+            pass
+        return district_id, station_id
 
     async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Creates a new FIR."""
@@ -83,6 +99,7 @@ class FIRService:
 
     async def find_all_with_filters(
         self,
+        officer: Dict[str, Any],
         limit: int = 100,
         offset: int = 0,
         fir_number: Optional[str] = None,
@@ -95,9 +112,10 @@ class FIRService:
         sort_by: str = "CREATEDTIME",
         sort_order: str = "DESC",
     ) -> List[Dict[str, Any]]:
-        """Retrieves FIRs with optional filters."""
+        """Retrieves FIRs with optional filters and automatic jurisdiction enforcement."""
         logger.info("Fetching filtered FIRs")
         self.validate_date_range(date_from, date_to)
+        district_id, station_id = self._apply_jurisdiction(officer, district_id, station_id)
         return await self.repo.find_all_with_filters(
             limit=limit,
             offset=offset,

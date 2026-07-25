@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.search_service import SearchService
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import SearchResponse, SearchSuggestion, SearchFilters
@@ -23,7 +24,7 @@ async def global_search(
     station: Optional[str] = Query(None, description="Filter by station ID"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SEARCH])),
 ):
     """Performs global search across all entities."""
     try:
@@ -56,7 +57,7 @@ async def search_suggestions(
     request: Request,
     keyword: str = Query(..., min_length=1, description="Partial keyword"),
     limit: int = Query(10, ge=1, le=10),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SEARCH])),
 ):
     """Returns search suggestions."""
     try:
@@ -80,7 +81,7 @@ async def search_suggestions(
 )
 async def search_filters(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_SEARCH])),
 ):
     """Returns available search filters."""
     try:

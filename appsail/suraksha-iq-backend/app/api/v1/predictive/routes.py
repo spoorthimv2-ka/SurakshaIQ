@@ -2,7 +2,8 @@ from fastapi import Request, APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.predictive_service import PredictiveService
 from app.schemas.predictive import (
     PredictiveFilters,
@@ -38,12 +39,12 @@ async def get_forecast(
     station_id: Optional[str] = Query(None),
     crime_category: Optional[str] = Query(None),
     time_period: Optional[str] = Query("30d"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id, station_id=station_id, crime_category=crime_category, time_period=time_period)
-        result = await service.get_forecast(current_user, filters)
+        result = await service.get_forecast(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -60,12 +61,12 @@ async def get_forecast(
 async def get_emerging_hotspots(
     request: Request,
     district_id: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id)
-        result = await service.get_emerging_hotspots(current_user, filters)
+        result = await service.get_emerging_hotspots(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -84,12 +85,12 @@ async def get_risk_index(
     district_id: Optional[str] = Query(None),
     station_id: Optional[str] = Query(None),
     crime_category: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id, station_id=station_id, crime_category=crime_category)
-        result = await service.get_dynamic_risk_index(current_user, filters)
+        result = await service.get_dynamic_risk_index(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -106,12 +107,12 @@ async def get_risk_index(
 async def get_patrol_recommendations(
     request: Request,
     district_id: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id)
-        result = await service.get_patrol_recommendations(current_user, filters)
+        result = await service.get_patrol_recommendations(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -130,12 +131,12 @@ async def get_temporal_intelligence(
     district_id: Optional[str] = Query(None),
     station_id: Optional[str] = Query(None),
     crime_category: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id, station_id=station_id, crime_category=crime_category)
-        result = await service.get_temporal_intelligence(current_user, filters)
+        result = await service.get_temporal_intelligence(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -154,12 +155,12 @@ async def get_trend_analysis(
     district_id: Optional[str] = Query(None),
     station_id: Optional[str] = Query(None),
     crime_category: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id, station_id=station_id, crime_category=crime_category)
-        result = await service.get_trend_analysis(current_user, filters)
+        result = await service.get_trend_analysis(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -176,11 +177,11 @@ async def get_trend_analysis(
 async def simulate_scenario(
     request: Request,
     scenario: ScenarioFilters,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
-        result = await service.simulate_scenario(current_user, scenario)
+        result = await service.simulate_scenario(current_officer, scenario)
         return result
     except HTTPException:
         raise
@@ -200,12 +201,12 @@ async def get_predictive_dashboard(
     station_id: Optional[str] = Query(None),
     crime_category: Optional[str] = Query(None),
     time_period: Optional[str] = Query("30d"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(district_id=district_id, station_id=station_id, crime_category=crime_category, time_period=time_period)
-        result = await service.get_predictive_dashboard(current_user, filters)
+        result = await service.get_predictive_dashboard(current_officer, filters)
         return result
     except HTTPException:
         raise
@@ -222,12 +223,12 @@ async def get_predictive_dashboard(
 async def get_ai_intelligence(
     request: Request,
     body: ExplainRequest = ...,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_PREDICTIVE_INTELLIGENCE])),
 ):
     try:
         service = PredictiveService(request)
         filters = PredictiveFilters(**(body.filters or {}))
-        result = await service.get_ai_intelligence(current_user, filters)
+        result = await service.get_ai_intelligence(current_officer, filters)
         return result
     except HTTPException:
         raise

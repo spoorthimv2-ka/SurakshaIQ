@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.repositories.district_repo import DistrictRepository
 from app.services.dashboard_service import DashboardService
 from app.schemas.district import DistrictResponse, DistrictSummary
@@ -28,14 +29,14 @@ def _to_district_summary(district: Dict[str, Any], case_count: int = 0, risk_ind
 )
 async def get_districts(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer)
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_DISTRICT_ANALYTICS]))
 ):
     """Retrieves all districts from Catalyst Data Store."""
     try:
         repo = DistrictRepository(request)
         districts = await repo.find_active(limit=10000)
         summary = DashboardService(request)
-        stats = await summary.get_district_summary(current_user)
+        stats = await summary.get_district_summary(current_officer)
         stats_map = {s.district_id: s for s in stats}
         result: List[Dict[str, Any]] = []
         for d in districts:
@@ -64,7 +65,7 @@ async def get_districts(
 async def get_district(
     request: Request,
     district_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer)
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_DISTRICT_ANALYTICS]))
 ):
     """Retrieves a district by ROWID."""
     try:
@@ -73,7 +74,7 @@ async def get_district(
         if not district:
             raise HTTPException(status_code=404, detail="District not found")
         service = DashboardService(request)
-        stats = await service.get_district_summary(current_user)
+        stats = await service.get_district_summary(current_officer)
         stats_row = next((s for s in stats if s.district_id == district_id), None)
         return _to_district_summary(
             district,
@@ -100,7 +101,7 @@ async def get_district_analytics(
     district_id: str,
     start_date: Optional[str] = Query(None, description="Start date (UTC)"),
     end_date: Optional[str] = Query(None, description="End date (UTC)"),
-    current_user: Dict[str, Any] = Depends(get_current_officer)
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_DISTRICT_ANALYTICS]))
 ):
     """Retrieves district analytics from Catalyst Data Store."""
     try:
@@ -110,7 +111,7 @@ async def get_district_analytics(
             raise HTTPException(status_code=404, detail="District not found")
 
         service = DashboardService(request)
-        stats = await service.get_statistics(current_user)
+        stats = await service.get_statistics(current_officer)
 
         total_crimes = 0
         for ds in stats.by_district:
@@ -119,7 +120,7 @@ async def get_district_analytics(
                 break
 
         comparisons = None
-        officer_role = current_user.get("role", "")
+        officer_role = current_officer.get("role", "")
         state_roles = [Role.STATE_COMMAND.value, Role.SYSTEM_ADMINISTRATOR.value, Role.CID_ANALYST.value, Role.RANGE_IG.value]
         if officer_role in state_roles:
             comparisons = []

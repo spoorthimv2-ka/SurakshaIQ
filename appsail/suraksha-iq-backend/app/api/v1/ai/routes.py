@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 import time
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.schemas.ai import (
     ChatRequest,
     ChatResponse,
@@ -47,7 +48,7 @@ router = APIRouter()
 async def executive_summary(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         service = ExecutiveIntelligenceService(request)
@@ -80,7 +81,7 @@ async def executive_summary(
 async def ai_chat(
     request: Request,
     body: ChatRequest,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         context = body.context or {}
@@ -121,7 +122,7 @@ async def ai_chat(
 async def fir_intelligence(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         if not ExecutiveIntelligenceService._is_ai_available():
@@ -156,7 +157,7 @@ async def fir_intelligence(
 async def pattern_discovery(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         analytics = payload.get("analytics", {})
@@ -193,7 +194,7 @@ async def pattern_discovery(
 async def recommendations(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         analytics = payload.get("analytics", {})
@@ -230,7 +231,7 @@ async def recommendations(
 async def intelligence_report(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         if not ExecutiveIntelligenceService._is_ai_available():
@@ -265,7 +266,7 @@ async def intelligence_report(
 async def explain_with_ai(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         chart_type = payload.get("chart_type", "")
@@ -294,7 +295,7 @@ async def explain_with_ai(
 async def evidence_summary(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         document_type = payload.get("document_type", "unknown")
@@ -338,7 +339,7 @@ async def evidence_summary(
 async def timeline_generator(
     request: Request,
     payload: Dict[str, Any] = Body(...),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_AI_INVESTIGATION])),
 ):
     try:
         incident_description = payload.get("incident_description", "")

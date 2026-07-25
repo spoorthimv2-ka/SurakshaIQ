@@ -8,10 +8,16 @@ from typing import List
 from app.models.enums import Role, Permission
 
 class TokenPayload(BaseModel):
-    sub: str  # officer_id
+    sub: str
     cat_id: str
+    badge_number: str
     role: Role
     permissions: List[Permission]
+    jurisdiction_type: str
+    station_id: Optional[str] = None
+    district_id: Optional[str] = None
+    state_access: bool = False
+    token_version: int = 1
     exp: int
     iat: int
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:

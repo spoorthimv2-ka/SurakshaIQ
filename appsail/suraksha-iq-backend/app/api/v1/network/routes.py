@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.network_service import NetworkService
 from app.schemas.network import (
     NetworkGraphResponse,
@@ -27,12 +28,12 @@ router = APIRouter()
 async def get_network(
     request: Request,
     limit: int = Query(500, ge=1, le=2000),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves network graph from Catalyst Data Store."""
     try:
         service = NetworkService(request)
-        graph = await service.get_network(current_user, limit=limit)
+        graph = await service.get_network(current_officer, limit=limit)
         return graph
     except HTTPException:
         raise
@@ -51,12 +52,12 @@ async def get_network(
 )
 async def get_network_statistics(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves network statistics from Catalyst Data Store."""
     try:
         service = NetworkService(request)
-        stats = await service.get_statistics(current_user)
+        stats = await service.get_statistics(current_officer)
         return stats
     except HTTPException:
         raise
@@ -76,12 +77,12 @@ async def get_network_statistics(
 async def get_offender_network(
     request: Request,
     offender_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves offender network from Catalyst Data Store."""
     try:
         service = NetworkService(request)
-        graph = await service.get_offender_network(current_user, offender_id)
+        graph = await service.get_offender_network(current_officer, offender_id)
         return graph
     except HTTPException:
         raise
@@ -101,12 +102,12 @@ async def get_offender_network(
 async def get_station_network(
     request: Request,
     station_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves station network from Catalyst Data Store."""
     try:
         service = NetworkService(request)
-        graph = await service.get_station_network(current_user, station_id)
+        graph = await service.get_station_network(current_officer, station_id)
         return graph
     except HTTPException:
         raise
@@ -126,12 +127,12 @@ async def get_station_network(
 async def get_district_network(
     request: Request,
     district_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves district network from Catalyst Data Store."""
     try:
         service = NetworkService(request)
-        graph = await service.get_district_network(current_user, district_id)
+        graph = await service.get_district_network(current_officer, district_id)
         return graph
     except HTTPException:
         raise
@@ -152,12 +153,12 @@ async def search_network(
     request: Request,
     q: str = Query(..., description="Search query"),
     limit: int = Query(50, ge=1, le=200),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Searches the network graph from Catalyst Data Store."""
     try:
         service = NetworkService(request)
-        result = await service.search(current_user, query=q, limit=limit)
+        result = await service.search(current_officer, query=q, limit=limit)
         return result
     except HTTPException:
         raise
@@ -182,7 +183,7 @@ async def get_advanced_graph(
     relationship_type: Optional[str] = Query(None, description="Filter by relationship type"),
     risk_level: Optional[str] = Query(None, description="Filter by risk level"),
     active_investigations: Optional[bool] = Query(None, description="Filter active investigations"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves advanced network graph from Catalyst Data Store."""
     try:
@@ -196,7 +197,7 @@ async def get_advanced_graph(
             "active_investigations": active_investigations,
         }
         filters = {k: v for k, v in filters.items() if v is not None}
-        graph = await service.get_advanced_graph(current_user, filters=filters)
+        graph = await service.get_advanced_graph(current_officer, filters=filters)
         return graph
     except HTTPException:
         raise
@@ -215,12 +216,12 @@ async def get_advanced_graph(
 )
 async def get_network_analytics(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves network analytics."""
     try:
         service = NetworkService(request)
-        result = await service.get_analytics(current_user)
+        result = await service.get_analytics(current_officer)
         return result
     except HTTPException:
         raise
@@ -239,12 +240,12 @@ async def get_network_analytics(
 )
 async def get_network_timeline(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves network timeline."""
     try:
         service = NetworkService(request)
-        result = await service.get_timeline(current_user)
+        result = await service.get_timeline(current_officer)
         return result
     except HTTPException:
         raise
@@ -263,12 +264,12 @@ async def get_network_timeline(
 )
 async def get_communities(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves community detection results."""
     try:
         service = NetworkService(request)
-        result = await service.get_communities(current_user)
+        result = await service.get_communities(current_officer)
         return result
     except HTTPException:
         raise
@@ -288,12 +289,12 @@ async def get_communities(
 async def get_central_actors(
     request: Request,
     metric: str = Query("degree", description="Centrality metric"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves central actors."""
     try:
         service = NetworkService(request)
-        result = await service.get_central_actors(current_user, metric=metric)
+        result = await service.get_central_actors(current_officer, metric=metric)
         return result
     except HTTPException:
         raise
@@ -311,12 +312,12 @@ async def get_central_actors(
 )
 async def get_bridge_nodes(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Retrieves bridge nodes."""
     try:
         service = NetworkService(request)
-        result = await service.get_bridge_nodes(current_user)
+        result = await service.get_bridge_nodes(current_officer)
         return result
     except HTTPException:
         raise
@@ -337,12 +338,12 @@ async def advanced_search_network(
     request: Request,
     q: str = Query(..., description="Search query"),
     limit: int = Query(50, ge=1, le=200),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_NETWORK_ANALYSIS])),
 ):
     """Advanced network search."""
     try:
         service = NetworkService(request)
-        result = await service.advanced_search(current_user, query=q, limit=limit)
+        result = await service.advanced_search(current_officer, query=q, limit=limit)
         return result
     except HTTPException:
         raise

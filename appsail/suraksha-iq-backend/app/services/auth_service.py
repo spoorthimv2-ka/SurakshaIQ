@@ -1,7 +1,8 @@
 from typing import Dict, Any
 from fastapi import Request
 
-from app.models.enums import ROLE_PERMISSIONS_MAP, Role
+from app.models.enums import Role, JurisdictionType
+from app.authorization.permissions import PermissionRegistry
 from app.repositories.officer_repo import OfficerRepository
 from app.repositories.catalyst_officer_repo import CatalystOfficerRepository
 from app.services.officer_service import OfficerService
@@ -23,7 +24,7 @@ class AuthService:
             role_enum = Role(role_str)
         except ValueError:
             role_enum = Role.STATION_HOUSE_OFFICER
-        permissions = ROLE_PERMISSIONS_MAP.get(role_enum, [])
+        permissions = PermissionRegistry.get_permissions(role_enum)
         return [p.value for p in permissions]
 
     def _get_attr(self, officer: Dict[str, Any], key: str, default=None):
@@ -78,17 +79,36 @@ class AuthService:
 
         row_id = self._get_attr(officer, "ROWID") or self._get_attr(officer, "row_id") or self._get_attr(officer, "id") or ""
         cat_id = self._get_attr(officer, "user_id") or self._get_attr(officer, "catalyst_user_id") or ""
+        badge_number = self._get_attr(officer, "badge_number") or ""
+        police_station_id = self._get_attr(officer, "police_station_id") or self._get_attr(officer, "station_id")
+        district_id = self._get_attr(officer, "district_id") or ""
+        jurisdiction_type = self._get_attr(officer, "jurisdiction_type") or ""
+        token_version = 1
+
+        try:
+            role_enum = Role(role_str)
+            state_access = PermissionRegistry.jurisdiction_for_role(role_enum) == JurisdictionType.STATE
+        except ValueError:
+            state_access = False
 
         payload = {
             "sub": str(row_id),
             "cat_id": str(cat_id),
+            "badge_number": str(badge_number),
             "role": role_str,
             "permissions": permissions,
+            "jurisdiction_type": jurisdiction_type,
+            "station_id": str(police_station_id) if police_station_id else None,
+            "district_id": str(district_id) if district_id else None,
+            "state_access": state_access,
+            "token_version": token_version,
         }
 
         access_token = create_access_token(payload)
         officer_dict = self._build_officer_dict(officer)
         officer_dict["permissions"] = permissions
+        officer_dict["state_access"] = state_access
+        officer_dict["token_version"] = token_version
 
         return {
             "access_token": access_token,

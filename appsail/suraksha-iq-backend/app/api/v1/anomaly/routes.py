@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.services.anomaly_service import AnomalyService
 from app.schemas.anomaly import Anomaly, AnomalySummary, DistrictAnomaly, StationAnomaly
 
@@ -17,12 +18,12 @@ router = APIRouter()
 async def get_anomalies(
     request: Request,
     limit: int = Query(100, ge=1, le=500),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ANOMALIES])),
 ):
     """Retrieves anomalies from Catalyst Data Store."""
     try:
         service = AnomalyService(request)
-        anomalies = await service.get_anomalies(current_user, limit=limit)
+        anomalies = await service.get_anomalies(current_officer, limit=limit)
         return anomalies
     except HTTPException:
         raise
@@ -41,12 +42,12 @@ async def get_anomalies(
 )
 async def get_anomaly_summary(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ANOMALIES])),
 ):
     """Retrieves anomaly summary from Catalyst Data Store."""
     try:
         service = AnomalyService(request)
-        summary = await service.get_summary(current_user)
+        summary = await service.get_summary(current_officer)
         return summary
     except HTTPException:
         raise
@@ -65,12 +66,12 @@ async def get_anomaly_summary(
 )
 async def get_district_anomalies(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ANOMALIES])),
 ):
     """Retrieves district anomalies from Catalyst Data Store."""
     try:
         service = AnomalyService(request)
-        districts = await service.get_district_anomalies(current_user)
+        districts = await service.get_district_anomalies(current_officer)
         return districts
     except HTTPException:
         raise
@@ -89,12 +90,12 @@ async def get_district_anomalies(
 )
 async def get_station_anomalies(
     request: Request,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ANOMALIES])),
 ):
     """Retrieves station anomalies from Catalyst Data Store."""
     try:
         service = AnomalyService(request)
-        stations = await service.get_station_anomalies(current_user)
+        stations = await service.get_station_anomalies(current_officer)
         return stations
     except HTTPException:
         raise
@@ -114,12 +115,12 @@ async def get_station_anomalies(
 async def get_anomaly(
     request: Request,
     anomaly_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_ANOMALIES])),
 ):
     """Retrieves anomaly details from Catalyst Data Store."""
     try:
         service = AnomalyService(request)
-        anomaly = await service.get_anomaly(current_user, anomaly_id)
+        anomaly = await service.get_anomaly(current_officer, anomaly_id)
         if not anomaly:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

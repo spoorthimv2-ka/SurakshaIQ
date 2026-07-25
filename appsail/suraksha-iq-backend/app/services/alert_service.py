@@ -10,6 +10,7 @@ from app.repositories.police_station_repo import PoliceStationRepository
 from app.core.logger import logger
 from app.schemas.alert import AlertResponse, AlertSummary
 from app.core.exceptions import DataValidationError
+from app.models.enums import JurisdictionType
 
 
 class AlertService:
@@ -24,15 +25,32 @@ class AlertService:
         self.district_repo = DistrictRepository(request)
         self.station_repo = PoliceStationRepository(request)
 
-    async def get_alerts(self, status_filter: Optional[str] = None, severity: Optional[str] = None, district_id: Optional[str] = None, station_id: Optional[str] = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+    def _apply_jurisdiction(self, officer: Dict[str, Any], district_id: Optional[str] = None, station_id: Optional[str] = None) -> tuple[Optional[str], Optional[str]]:
+        jurisdiction_type = officer.get("jurisdiction_type") or JurisdictionType.STATION.value
+        officer_station = officer.get("station_id")
+        officer_district = officer.get("district_id")
+
+        if jurisdiction_type == JurisdictionType.STATION.value:
+            if not station_id and officer_station:
+                station_id = officer_station
+        elif jurisdiction_type == JurisdictionType.DISTRICT.value:
+            if not district_id and officer_district:
+                district_id = officer_district
+        elif jurisdiction_type == JurisdictionType.STATE.value:
+            pass
+        return district_id, station_id
+
+    async def get_alerts(self, officer: Dict[str, Any], status_filter: Optional[str] = None, severity: Optional[str] = None, district_id: Optional[str] = None, station_id: Optional[str] = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieves alerts with optional filters."""
+        district_id, station_id = self._apply_jurisdiction(officer, district_id, station_id)
         logger.info("Fetching Alerts")
         if status_filter:
             return await self.repo.find_by_status(status_filter, limit=limit, offset=offset, district_id=district_id, station_id=station_id)
         return await self.repo.find_active(limit=limit, offset=offset, district_id=district_id, station_id=station_id)
 
-    async def get_active_alerts(self, limit: int = 100, offset: int = 0, district_id: Optional[str] = None, station_id: Optional[str] = None, severity: Optional[str] = None, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def get_active_alerts(self, officer: Dict[str, Any], limit: int = 100, offset: int = 0, district_id: Optional[str] = None, station_id: Optional[str] = None, severity: Optional[str] = None, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves active alerts."""
+        district_id, station_id = self._apply_jurisdiction(officer, district_id, station_id)
         logger.info("Fetching active Alerts")
         if status_filter:
             return await self.repo.find_by_status(status_filter, limit=limit, offset=offset, district_id=district_id, station_id=station_id)

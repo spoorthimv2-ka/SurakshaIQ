@@ -1,7 +1,8 @@
 from fastapi import Request,  APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.repositories.crime_repo import CrimeRepository
 from app.services.crime_service import CrimeService
 from app.schemas.crime import CrimeCreate, CrimeUpdate, CrimeResponse
@@ -28,7 +29,7 @@ async def get_crimes(
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by status"),
     date_from: Optional[str] = Query(None, description="Start date (ISO format)"),
     date_to: Optional[str] = Query(None, description="End date (ISO format)"),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     """Retrieves crimes with optional filters."""
     try:
@@ -36,6 +37,7 @@ async def get_crimes(
         service = CrimeService(request, repo)
 
         crimes = await service.find_all_with_filters(
+            officer=current_officer,
             limit=limit,
             offset=offset,
             keyword=keyword,
@@ -65,7 +67,7 @@ async def get_crimes(
 async def get_crime(
     request: Request,
     crime_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     """Retrieves a Crime by ID."""
     try:
@@ -97,7 +99,7 @@ async def get_crime(
 async def create_crime(
     request: Request,
     payload: CrimeCreate,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     """Creates a new Crime."""
     try:
@@ -129,7 +131,7 @@ async def update_crime(
     request: Request,
     crime_id: str,
     payload: CrimeUpdate,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     """Updates an existing Crime."""
     try:
@@ -164,7 +166,7 @@ async def update_crime(
 async def delete_crime(
     request: Request,
     crime_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     """Deletes a Crime."""
     try:

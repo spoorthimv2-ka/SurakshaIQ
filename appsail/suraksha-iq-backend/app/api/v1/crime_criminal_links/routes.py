@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from typing import Optional, Dict, Any, List
 
-from app.api.deps import get_current_officer
+from app.api.deps import get_current_officer, RequirePermission
+from app.models.enums import Permission
 from app.repositories.crime_criminal_link_repo import CrimeCriminalLinkRepository
 from app.schemas.crime_criminal_link import (
     CrimeCriminalLinkCreate,
@@ -22,16 +23,16 @@ router = APIRouter()
 )
 async def create_link(
     payload: CrimeCriminalLinkCreate,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     try:
         repo = CrimeCriminalLinkRepository(None)
-        repo.request = current_user.get("request")
+        repo.request = current_officer.get("request")
         result = await repo.create_link(
             crime_id=payload.crime_id,
             criminal_id=payload.criminal_id,
             role=payload.role,
-            linked_by_officer_id=current_user.get("ROWID", ""),
+            linked_by_officer_id=current_officer.get("ROWID", ""),
             notes=payload.notes or "",
         )
         return CrimeCriminalLinkResponse(
@@ -40,7 +41,7 @@ async def create_link(
             criminal_id=payload.criminal_id,
             role=payload.role,
             notes=payload.notes,
-            linked_by_officer_id=current_user.get("ROWID", ""),
+            linked_by_officer_id=current_officer.get("ROWID", ""),
             linked_at=result.get("linked_at"),
             CREATEDTIME=result.get("CREATEDTIME", ""),
             MODIFIEDTIME=result.get("MODIFIEDTIME", ""),
@@ -68,11 +69,11 @@ async def list_by_crime(
     crime_id: str,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     try:
         repo = CrimeCriminalLinkRepository(None)
-        repo.request = current_user.get("request")
+        repo.request = current_officer.get("request")
         links = await repo.find_by_crime(crime_id, limit=limit, offset=offset)
         return [CrimeCriminalLinkResponse(**link) for link in links]
     except HTTPException:
@@ -94,11 +95,11 @@ async def list_by_criminal(
     criminal_id: str,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     try:
         repo = CrimeCriminalLinkRepository(None)
-        repo.request = current_user.get("request")
+        repo.request = current_officer.get("request")
         links = await repo.find_by_criminal(criminal_id, limit=limit, offset=offset)
         return [CrimeCriminalLinkResponse(**link) for link in links]
     except HTTPException:
@@ -118,11 +119,11 @@ async def list_by_criminal(
 )
 async def delete_link(
     link_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_officer),
+    current_officer: Dict[str, Any] = Depends(RequirePermission([Permission.ACCESS_CRIME_MANAGEMENT])),
 ):
     try:
         repo = CrimeCriminalLinkRepository(None)
-        repo.request = current_user.get("request")
+        repo.request = current_officer.get("request")
         await repo.delete_link(link_id)
         return None
     except HTTPException:
