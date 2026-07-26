@@ -27,14 +27,6 @@ async def request_logger(request: Request, call_next):
     return response
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app.include_router(api_router, prefix=settings.api_v1_str)
 
 @app.exception_handler(DataValidationError)

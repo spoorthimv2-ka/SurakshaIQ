@@ -42,18 +42,43 @@ class ReportRepository(BaseCatalystRepository):
             if sort_order.upper() not in ("ASC", "DESC"):
                 raise DataValidationError("sort_order must be ASC or DESC")
             offset_val = max(int(offset), 0)
-            query = (
-                f"SELECT * FROM {self.table_name} "
-                f"ORDER BY {sort_by} {sort_order.upper()} "
-                f"LIMIT {offset_val}, {int(limit)}"
-            )
-            result = self.zcql.execute_query(query)
-            
-            rows = []
-            for item in result:
-                if self.table_name in item:
-                    rows.append(item[self.table_name])
-            return rows
+
+            BATCH_SIZE = 300
+            if limit <= BATCH_SIZE:
+                query = (
+                    f"SELECT * FROM {self.table_name} "
+                    f"ORDER BY {sort_by} {sort_order.upper()} "
+                    f"LIMIT {offset_val}, {int(limit)}"
+                )
+                result = self.zcql.execute_query(query)
+                rows = []
+                for item in result:
+                    if self.table_name in item:
+                        rows.append(item[self.table_name])
+                return rows
+
+            all_results: List[Dict[str, Any]] = []
+            current_offset = offset_val
+            while len(all_results) < limit:
+                batch_size = min(BATCH_SIZE, limit - len(all_results))
+                query = (
+                    f"SELECT * FROM {self.table_name} "
+                    f"ORDER BY {sort_by} {sort_order.upper()} "
+                    f"LIMIT {current_offset}, {batch_size}"
+                )
+                result = self.zcql.execute_query(query)
+                batch = [item[self.table_name] for item in result if self.table_name in item]
+
+                if not batch:
+                    break
+
+                all_results.extend(batch)
+                current_offset += len(batch)
+
+                if len(batch) < batch_size:
+                    break
+
+            return all_results
         except CatalystError as e:
             logger.error(f"Error fetching reports: {e}")
             raise RepositoryError(f"Failed to fetch reports: {e}")

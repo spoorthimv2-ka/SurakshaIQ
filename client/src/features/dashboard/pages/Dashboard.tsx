@@ -106,7 +106,11 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     refreshAi();
-  }, [refreshAi]);
+    // Intentionally depend only on `summary` instead of `refreshAi` to avoid
+    // re-running whenever trends/hotspots/anomalies change, which would create
+    // an infinite render loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary]);
 
   const handleExplain = useCallback(async (widget: string, data: any) => {
     setExplainState((prev) => ({ ...prev, [widget]: { data } }));

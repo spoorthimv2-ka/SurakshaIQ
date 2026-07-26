@@ -196,9 +196,30 @@ class BaseCatalystRepository:
     async def find_all(self, limit: int = 100, next_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieves all records from the table."""
         try:
-            query = f"SELECT * FROM {self.table_name} LIMIT {int(limit)}"
-            result = self.zcql.execute_query(query)
-            return [item[self.table_name] for item in result if self.table_name in item]
+            BATCH_SIZE = 300
+            if limit <= BATCH_SIZE:
+                query = f"SELECT * FROM {self.table_name} LIMIT {int(limit)}"
+                result = self.zcql.execute_query(query)
+                return [item[self.table_name] for item in result if self.table_name in item]
+
+            all_results: List[Dict[str, Any]] = []
+            offset = 0
+            while len(all_results) < limit:
+                batch_size = min(BATCH_SIZE, limit - len(all_results))
+                query = f"SELECT * FROM {self.table_name} LIMIT {offset}, {batch_size}"
+                result = self.zcql.execute_query(query)
+                batch = [item[self.table_name] for item in result if self.table_name in item]
+
+                if not batch:
+                    break
+
+                all_results.extend(batch)
+                offset += len(batch)
+
+                if len(batch) < batch_size:
+                    break
+
+            return all_results
         except CatalystError as e:
             logger.error(f"Error finding all records in {self.table_name}: {e}")
             raise RepositoryError(f"Failed to fetch records: {e}")

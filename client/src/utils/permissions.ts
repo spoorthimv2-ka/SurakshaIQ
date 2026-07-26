@@ -120,6 +120,7 @@ function permissionsForTier(tier: string): string[] {
 
 export function hasPermission(officer: Officer | null, permission: string): boolean {
   if (!officer) return false;
+  if (officer.permissions.includes(permission)) return true;
   const tier = tierForRole(officer.role);
   const perms = permissionsForTier(tier);
   return perms.includes(permission);

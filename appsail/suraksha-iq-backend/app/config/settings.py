@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     "http://localhost:3000",
     "http://localhost:5173",
     "https://surakshaiq-60078728338.development.catalystserverless.in",
+    "https://surakshaiq-60078728338.catalystserverless.in"
     ]
 
     # AI / Catalyst AI

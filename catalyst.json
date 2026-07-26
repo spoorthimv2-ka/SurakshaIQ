@@ -8,15 +8,16 @@
     "source": "functions"
   },
   "client": {
-    "source": "client"
+    "source": "client/build"
   },
   "appsail": [
     {
+      
       "source": "appsail\\suraksha-iq-backend",
       "name": "suraksha-iq-backend"
     },
     {
-      "source": "docker://prasad15hari/suraksha-iq-backend:v24",
+      "source": "docker://prasad15hari/suraksha-iq-backend:v39",
       "name": "suraksha-iq-backend-docker"
     }
   ]

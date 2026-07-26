@@ -80,9 +80,31 @@ class AnomalyRepository(BaseCatalystRepository):
         """Retrieves all anomaly records (stub for compatibility)."""
         try:
             offset_val = max(int(offset), 0)
-            query = f"SELECT * FROM {self.table_name} LIMIT {offset_val}, {int(limit)}"
-            result = self.zcql.execute_query(query)
-            return [item[self.table_name] for item in result if self.table_name in item]
+
+            BATCH_SIZE = 300
+            if limit <= BATCH_SIZE:
+                query = f"SELECT * FROM {self.table_name} LIMIT {offset_val}, {int(limit)}"
+                result = self.zcql.execute_query(query)
+                return [item[self.table_name] for item in result if self.table_name in item]
+
+            all_results: List[Dict[str, Any]] = []
+            current_offset = offset_val
+            while len(all_results) < limit:
+                batch_size = min(BATCH_SIZE, limit - len(all_results))
+                query = f"SELECT * FROM {self.table_name} LIMIT {current_offset}, {batch_size}"
+                result = self.zcql.execute_query(query)
+                batch = [item[self.table_name] for item in result if self.table_name in item]
+
+                if not batch:
+                    break
+
+                all_results.extend(batch)
+                current_offset += len(batch)
+
+                if len(batch) < batch_size:
+                    break
+
+            return all_results
         except CatalystError as e:
             logger.error(f"Error fetching anomalies: {e}")
             raise RepositoryError(f"Failed to fetch anomalies: {e}")
