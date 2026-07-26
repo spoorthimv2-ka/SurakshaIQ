@@ -7,6 +7,7 @@ from app.repositories.crime_repo import CrimeRepository
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.logger import logger
 from app.analytics.spatial import compute_clusters, Cluster
+from app.core.utils import catalyst_datetime
 
 
 class HotspotEngine:
@@ -34,7 +35,7 @@ class HotspotEngine:
 
         for c in clusters:
             row = c.model_dump(mode="json")
-            row["scored_at"] = datetime.now(timezone.utc).isoformat()
+            row["scored_at"] = catalyst_datetime()
             self.cluster_repo.get_table().insert_row(row)
 
         return clusters

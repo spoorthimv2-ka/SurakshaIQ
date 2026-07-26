@@ -3,6 +3,7 @@ import traceback
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 from app.core.logger import logger
+from app.core.utils import catalyst_datetime
 
 
 def _now_iso() -> str:
@@ -322,7 +323,7 @@ def _seed_large_dataset() -> None:
             "message": f"Alert for {dist_map[did]['name']} area",
             "district_id": did,
             "created_at": rand_ts(),
-            "resolved_at": _now_iso() if rng.random() < 0.3 else None,
+            "resolved_at": catalyst_datetime() if rng.random() < 0.3 else None,
             "title": f"{dist_map[did]['name']} Alert",
             "description": f"Alert message for {dist_map[did]['name']}",
             "source": "SYSTEM",

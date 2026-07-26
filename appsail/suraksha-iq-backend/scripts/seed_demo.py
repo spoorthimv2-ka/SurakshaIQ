@@ -18,6 +18,7 @@ from datetime import datetime, timezone, timedelta
 
 from zcatalyst_sdk import initialize_app
 import bcrypt
+from app.core.utils import catalyst_datetime
 
 
 DEMO_EMAIL = "demo@karnatakapolice.gov.in"
@@ -83,7 +84,7 @@ async def main() -> None:
             "title": f"Demo {ctype} #{len(crimes)+1}",
             "crime_type": ctype,
             "description": "Seeded for demo",
-            "incident_date": now.isoformat(),
+            "incident_date": catalyst_datetime(),
             "district_id": did,
             "station_id": sid,
             "status": "ACTIVE",
@@ -134,7 +135,7 @@ async def main() -> None:
             "officer_id": officer_rowid,
             "status": "ACTIVE",
             "description": "Seeded FIR",
-            "fir_date": now.isoformat(),
+            "fir_date": catalyst_datetime(),
         })
 
     # --- Alerts (2) -------------------------------------------------------
@@ -169,9 +170,9 @@ async def main() -> None:
             "center_lon": 77.5900,
             "radius_m": 1200.0,
             "crime_count": 3,
-            "period_start": (now - timedelta(days=30)).isoformat(),
-            "period_end": now.isoformat(),
-            "scored_at": now.isoformat(),
+            "period_start": catalyst_datetime(now - timedelta(days=30)),
+            "period_end": catalyst_datetime(),
+            "scored_at": catalyst_datetime(),
         })
     except Exception as exc:
         print(f"Cluster seed skipped (table may not exist yet): {exc}")
@@ -187,7 +188,7 @@ async def main() -> None:
             "level": "MEDIUM",
             "factors": [],
             "model_version": "v1-seed",
-            "scored_at": now.isoformat(),
+            "scored_at": catalyst_datetime(),
         })
     except Exception as exc:
         print(f"Ledger seed skipped (table may not exist yet): {exc}")

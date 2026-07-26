@@ -7,6 +7,7 @@ from app.repositories.police_station_repo import PoliceStationRepository
 from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.repositories.fir_repo import FIRRepository
 from app.core.logger import logger
+from app.core.utils import catalyst_datetime
 from app.schemas.hotspot import (
     HotspotResponse,
     DistrictHotspotResponse,
@@ -39,7 +40,7 @@ class HotspotService:
                 "level": level,
                 "factors": [],
                 "model_version": "v1-heuristic",
-                "scored_at": datetime.now(timezone.utc).isoformat(),
+                "scored_at": catalyst_datetime(),
             })
         except Exception as e:
             logger.warning(f"Ledger write failed: {e}")

@@ -3,6 +3,7 @@ import logging
 import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+from .utils import catalyst_datetime
 
 import bcrypt
 import zcatalyst_sdk
@@ -510,11 +511,7 @@ def _triage_rows_by_schema(
 
 
 def _get_mock_data() -> Dict[str, List[Dict[str, Any]]]:
-    try:
-        from app.core.mock_data import _MOCK_DATA
-        return _MOCK_DATA
-    except ImportError:
-        return {}
+    return {}
 
 
 def _seed_table(app, table_name: str, rows: List[Dict[str, Any]]) -> Tuple[int, int]:
@@ -594,7 +591,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
         hot_tbl = app.datastore().table("CrimeHotspotCluster")
         ledg_tbl = app.datastore().table("PredictionLedger")
 
-        now = _now_iso()
+        now = datetime.now(timezone.utc)
 
         d1, d2 = None, None
         if not _row_exists(app, "District", "name", "Central District"):
@@ -653,7 +650,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
         officer_rowid = None
         if not _row_exists(app, "Officer", "badge_number", demo_badge):
             hashed = _bcrypt_hash("Demo@1234")
-            o = off_tbl.insert_row({
+            officer_payload = {
                 "name": "Demo Officer",
                 "email": demo_email,
                 "badge_number": demo_badge,
@@ -662,9 +659,19 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "catalyst_user_id": "USR-DEMO-001",
                 "police_station_id": s1rid,
                 "status": "ACTIVE",
-            })
-            inserted += 1
-            officer_rowid = o.get("ROWID")
+            }
+            app_logger.info("[OFFICER_SEED] Insert payload: %s", officer_payload)
+            try:
+                o = off_tbl.insert_row(officer_payload)
+                app_logger.info("[OFFICER_SEED] Insert response: %s", o)
+                inserted += 1
+                officer_rowid = o.get("ROWID")
+            except Exception as exception:
+                app_logger.error("[OFFICER_SEED] Insert failed: exception_type=%s", type(exception))
+                app_logger.error("[OFFICER_SEED] Insert failed: message=%s", str(exception))
+                app_logger.error("[OFFICER_SEED] Insert failed: payload=%s", officer_payload)
+                app_logger.error("[OFFICER_SEED] Insert failed: traceback=%s", traceback.format_exc())
+                raise
         else:
             skipped += 1
             q = f"SELECT ROWID FROM Officer WHERE badge_number = '{str(demo_badge).replace(chr(39), chr(39)+chr(39))}' LIMIT 1"
@@ -686,7 +693,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "title": title,
                 "crime_type": ctype,
                 "description": "Seeded for demo",
-                "incident_date": now,
+                "incident_date": catalyst_datetime(now),
                 "district_id": did,
                 "station_id": sid,
                 "status": "ACTIVE",
@@ -737,7 +744,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "officer_id": officer_rowid or "",
                 "status": "ACTIVE",
                 "description": "Seeded FIR",
-                "fir_date": now,
+                "fir_date": catalyst_datetime(now),
             })
             inserted += 1
 
@@ -773,9 +780,9 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "center_lon": 77.5900,
                 "radius_m": 1200,
                 "crime_count": 3,
-                "period_start": now,
-                "period_end": now,
-                "scored_at": now,
+                "period_start": catalyst_datetime(now),
+                "period_end": catalyst_datetime(now),
+                "scored_at": catalyst_datetime(now),
             })
             inserted += 1
         except Exception as exception:
@@ -792,16 +799,16 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "level": "MEDIUM",
                 "factors": [],
                 "model_version": "v1-seed",
-                "scored_at": now,
+                "scored_at": catalyst_datetime(now),
             })
             inserted += 1
         except Exception as exception:
             app_logger.warning("[TEMP] Prediction ledger insert failed: %s\n%s", exception, traceback.format_exc())
             skipped += 1
     except Exception as exception:
-        print(type(exception))
-        print(str(exception))
-        print(traceback.format_exc())
+        app_logger.error("[TEMP] seed_demo_data() failed: %s", exception)
+        app_logger.error(traceback.format_exc())
+        raise
     return inserted, skipped
 
 
@@ -869,6 +876,7 @@ def create_default_users(app) -> Tuple[int, int]:
             "CREATEDTIME": _now_iso(),
             "MODIFIEDTIME": _now_iso(),
         }
+        app_logger.info("[OFFICER_DEFAULT] Insert payload: %s", officer_row)
         try:
             is_dup = False
             safe_badge = str(badge_number).replace(chr(39), chr(39) + chr(39))
@@ -877,13 +885,17 @@ def create_default_users(app) -> Tuple[int, int]:
             if result and len(result) > 0:
                 is_dup = True
             if not is_dup:
-                officers_tbl.insert_row(officer_row)
+                response = officers_tbl.insert_row(officer_row)
+                app_logger.info("[OFFICER_DEFAULT] Insert response: %s", response)
                 created += 1
             else:
                 skipped += 1
         except Exception as exception:
-            app_logger.warning("[TEMP] Default officer creation failed: %s\n%s", exception, traceback.format_exc())
-            skipped += 1
+            app_logger.error("[OFFICER_DEFAULT] Insert failed: exception_type=%s", type(exception))
+            app_logger.error("[OFFICER_DEFAULT] Insert failed: message=%s", str(exception))
+            app_logger.error("[OFFICER_DEFAULT] Insert failed: payload=%s", officer_row)
+            app_logger.error("[OFFICER_DEFAULT] Insert failed: traceback=%s", traceback.format_exc())
+            raise
 
         user_row: Dict[str, Any] = {
             "name": name,

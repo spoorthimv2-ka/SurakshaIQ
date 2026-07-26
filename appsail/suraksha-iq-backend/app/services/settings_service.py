@@ -18,6 +18,7 @@ from app.schemas.settings import (
     AIReportRequest,
     AIReportResponse,
 )
+from app.core.utils import catalyst_datetime
 
 
 class SettingsService:
@@ -143,7 +144,7 @@ class SettingsService:
             row = table.get_row(notification_id)
             if row:
                 row["read"] = True
-                row["read_at"] = datetime.now(timezone.utc).isoformat()
+                row["read_at"] = catalyst_datetime()
                 table.update_row(row)
             return {"success": True}
         except Exception as e:

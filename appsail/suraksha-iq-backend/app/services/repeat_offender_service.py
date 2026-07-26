@@ -11,6 +11,7 @@ from app.repositories.district_repo import DistrictRepository
 from app.repositories.police_station_repo import PoliceStationRepository
 from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.core.logger import logger
+from app.core.utils import catalyst_datetime
 from app.schemas.repeat_offender import (
     RepeatOffenderResponse,
     RepeatOffenderDetailResponse,
@@ -393,7 +394,7 @@ class RepeatOffenderService:
                 "level": level,
                 "factors": [],
                 "model_version": "v1-heuristic",
-                "scored_at": datetime.now(timezone.utc).isoformat(),
+                "scored_at": catalyst_datetime(),
             })
         except Exception as e:
             logger.warning(f"Ledger write failed: {e}")

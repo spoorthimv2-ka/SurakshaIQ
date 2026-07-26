@@ -200,12 +200,13 @@ class AdminService:
         logger.info(f"Creating audit log: {action} by {user_id} on {target}")
         import uuid
         from datetime import datetime, timezone
+        from app.core.utils import catalyst_datetime
         log_data = {
             "log_id": str(uuid.uuid4()),
             "action": action,
             "user_id": user_id,
             "target": target,
-            "event_timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_timestamp": catalyst_datetime(),
             "metadata": metadata or {},
         }
         return await self.repo.create_audit_log(log_data)

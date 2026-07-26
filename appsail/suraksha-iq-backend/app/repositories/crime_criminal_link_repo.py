@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import Request
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError, DataValidationError
+from app.core.utils import catalyst_datetime
 from zcatalyst_sdk.exceptions import CatalystError
 from app.core.logger import logger
 
@@ -25,7 +26,7 @@ class CrimeCriminalLinkRepository(BaseCatalystRepository):
             "role": role,
             "linked_by_officer_id": linked_by_officer_id,
             "notes": notes,
-            "linked_at": datetime.now(timezone.utc).isoformat(),
+            "linked_at": catalyst_datetime(),
         }
         try:
             table = self.get_table()

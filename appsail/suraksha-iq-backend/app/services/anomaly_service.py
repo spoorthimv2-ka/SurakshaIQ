@@ -11,6 +11,7 @@ from app.repositories.hotspot_repo import HotspotRepository
 from app.repositories.repeat_offender_repo import RepeatOffenderRepository
 from app.repositories.prediction_ledger_repo import PredictionLedgerRepository
 from app.core.logger import logger
+from app.core.utils import catalyst_datetime
 from app.schemas.anomaly import (
     Anomaly,
     AnomalyFactor,
@@ -45,7 +46,7 @@ class AnomalyService:
                 "level": level,
                 "factors": factors or [],
                 "model_version": "v1-heuristic",
-                "scored_at": datetime.now(timezone.utc).isoformat(),
+                "scored_at": catalyst_datetime(),
             })
         except Exception as e:
             logger.warning(f"Ledger write failed: {e}")

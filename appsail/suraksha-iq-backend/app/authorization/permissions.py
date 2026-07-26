@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Set, Dict, Any, Optional
 from fastapi import HTTPException, status
 
-from app.models.enums import Role, Permission, JurisdictionType, ROLE_TIER_MAP, TIER_PERMISSIONS
+from app.models.enums import Role, Permission, JurisdictionType, ROLE_TIER_MAP, ROLE_JURISDICTION_MAP, TIER_PERMISSIONS
 
 class PermissionRegistry:
     @staticmethod
