@@ -194,7 +194,7 @@ TABLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             {"column_name": "user_id", "data_type": "varchar", "max_length": 50, "is_mandatory": True},
             {"column_name": "target", "data_type": "varchar", "max_length": 50, "is_mandatory": True},
             {"column_name": "metadata", "data_type": "json", "is_mandatory": False},
-            {"column_name": "timestamp", "data_type": "datetime", "is_mandatory": True},
+            {"column_name": "event_timestamp", "data_type": "datetime", "is_mandatory": True},
         ]
     },
     "NetworkNode": {

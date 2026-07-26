@@ -205,7 +205,7 @@ class AdminService:
             "action": action,
             "user_id": user_id,
             "target": target,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_timestamp": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {},
         }
         return await self.repo.create_audit_log(log_data)

@@ -58,7 +58,7 @@ class AuditLog(BaseModel):
     action: str
     user_id: str
     target: str
-    timestamp: str
+    event_timestamp: str
     metadata: Dict[str, Any] = {}
 
     model_config = ConfigDict(from_attributes=True)

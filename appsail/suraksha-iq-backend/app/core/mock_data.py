@@ -349,7 +349,7 @@ def _seed_large_dataset() -> None:
             "user_id": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "target": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "metadata": {"ip": "127.0.0.1"},
-            "timestamp": rand_ts(),
+            "event_timestamp": rand_ts(),
         }))
 
     for i in range(1, 21):
