@@ -1,9 +1,11 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 from fastapi import Request
+import traceback
 
 from app.repositories.crime_repo import CrimeRepository
 from app.repositories.base_repository import BaseCatalystRepository
+from app.core.logger import logger
 from app.analytics.spatial import compute_clusters, Cluster
 
 
@@ -51,5 +53,6 @@ class HotspotEngine:
                 if self.cluster_repo.table_name in item:
                     rows.append(item[self.cluster_repo.table_name])
             return [Cluster(**r) for r in rows]
-        except Exception:
+        except Exception as exception:
+            logger.warning("Failed to fetch cached clusters: %s\n%s", exception, traceback.format_exc())
             return []

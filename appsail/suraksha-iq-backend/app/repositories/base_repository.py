@@ -80,7 +80,7 @@ ALLOWED_COLUMNS: Dict[str, Tuple[str, ...]] = {
         "district_id", "risk_score", "status", "CREATEDTIME", "MODIFIEDTIME",
     ),
     "Anomaly": (
-        "ROWID", "anomaly_type", "affected_entity_name", "severity",
+        "ROWID", "anomaly_type", "affected_entity_id", "affected_entity_name", "severity",
         "district_id", "status", "description", "CREATEDTIME", "MODIFIEDTIME",
     ),
     "PredictiveRisk": (

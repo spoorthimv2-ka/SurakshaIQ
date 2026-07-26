@@ -16,7 +16,7 @@
       "name": "suraksha-iq-backend"
     },
     {
-      "source": "docker://prasad15hari/suraksha-iq-backend:v20",
+      "source": "docker://prasad15hari/suraksha-iq-backend:v24",
       "name": "suraksha-iq-backend-docker"
     }
   ]

@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 from fastapi import Request
+import traceback
 
 from app.repositories.predictive_repo import PredictiveRepository
 from app.repositories.crime_repo import CrimeRepository
@@ -145,8 +146,8 @@ class PredictiveService:
                     dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     if dt >= recent_cutoff:
                         district_recent[did] += 1
-                except Exception:
-                    pass
+                except Exception as exception:
+                    logger.warning("Failed to parse created timestamp: %s\n%s", exception, traceback.format_exc())
 
         hotspots: List[EmergingHotspot] = []
         for did, total in district_counts.items():
@@ -320,8 +321,8 @@ class PredictiveService:
                 season = self._get_season(dt.month)
                 seasonal[season] += 1
                 total += 1
-            except Exception:
-                pass
+            except Exception as exception:
+                logger.warning("Failed to parse created timestamp: %s\n%s", exception, traceback.format_exc())
 
         def pct(count: int) -> float:
             return round(count / max(total, 1) * 100, 2)
@@ -374,8 +375,8 @@ class PredictiveService:
                     current[cat] += 1
                 elif dt >= previous_start:
                     previous[cat] += 1
-            except Exception:
-                pass
+            except Exception as exception:
+                logger.warning("Failed to parse created timestamp: %s\n%s", exception, traceback.format_exc())
 
         all_cats = set(current.keys()) | set(previous.keys())
         increasing: List[TrendCategory] = []
@@ -484,8 +485,8 @@ class PredictiveService:
         try:
             service = ExecutiveIntelligenceService(self.request)
             _ = service  # available for future direct integration
-        except Exception:
-            pass
+        except Exception as exception:
+            logger.warning("AI intelligence integration failed: %s\n%s", exception, traceback.format_exc())
 
         forecast_text = f"Forecast for the next period predicts {dashboard.predicted_incident_count} incidents with {round(dashboard.forecast_confidence * 100)}% confidence."
         risk_text = f"Highest risk district is {dashboard.highest_risk_district.get('entity_name', 'N/A')} with score {dashboard.highest_risk_district.get('risk_score', 0)}."

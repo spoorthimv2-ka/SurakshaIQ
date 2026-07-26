@@ -1,6 +1,8 @@
 import re
+import traceback
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone, timedelta
+from app.core.logger import logger
 
 
 def _now_iso() -> str:
@@ -618,7 +620,8 @@ def _eval_condition(row: Dict[str, Any], condition: str) -> bool:
                 return str(actual).lower() < val.lower()
             if op == "<=":
                 return str(actual).lower() <= val.lower()
-        except Exception:
+        except Exception as exception:
+            logger.warning("Mock ZCQL evaluation failed: %s\n%s", exception, traceback.format_exc())
             return False
         return True
 

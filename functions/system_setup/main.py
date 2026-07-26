@@ -1,31 +1,32 @@
 import json
 import logging
 import sys
+import traceback
+
 from pathlib import Path
 
 log = logging.getLogger("system_setup")
 
-# [TEMP LOGGING] Module entry point
-log.info("[TEMP] system_setup module loaded")
-# [END TEMP LOGGING]
+log.info("[BOOTSTRAP] system_setup handler starting")
 
 try:
     from catalyst_bootstrap.datastore_bootstrap import bootstrap as _bootstrap
-    log.info("[TEMP] Successfully imported catalyst_bootstrap.datastore_bootstrap")
+    log.info("[BOOTSTRAP] Successfully imported catalyst_bootstrap.datastore_bootstrap")
 except ImportError as _import_err:
-    log.error("[TEMP] Failed to import bootstrap module: %s", _import_err)
+    tb = traceback.format_exc()
+    log.error("[BOOTSTRAP] Failed to import bootstrap module: %s\n%s", _import_err, tb)
     raise ImportError(
         f"Failed to import bootstrap module from local catalyst_bootstrap package. Error: {_import_err}"
     )
 
 
 def handler(context, basicio):
-    log.info("[TEMP] handler() invoked")
+    log.info("[BOOTSTRAP] handler() invoked, context type=%s", type(context).__name__)
     try:
-        log.info("[TEMP] About to call bootstrap()")
+        log.info("[BOOTSTRAP] About to call bootstrap()")
         result = _bootstrap()
         log.info(
-            "[TEMP] bootstrap() returned: success=%s, tables_created=%s, rows_inserted=%s",
+            "[BOOTSTRAP] bootstrap() returned: success=%s, tables_created=%s, rows_inserted=%s",
             result.get("success"),
             result.get("tables_created"),
             result.get("rows_inserted"),
@@ -33,7 +34,8 @@ def handler(context, basicio):
         basicio.write(json.dumps(result))
         log.info("Bootstrap completed successfully")
     except Exception as exc:
-        log.exception("Bootstrap failed")
+        tb = traceback.format_exc()
+        log.error("[BOOTSTRAP] Bootstrap failed: %s\n%s", exc, tb)
         basicio.write(
             json.dumps(
                 {
@@ -49,3 +51,4 @@ def handler(context, basicio):
         )
     finally:
         context.close()
+

@@ -1,5 +1,6 @@
 from typing import Dict, Any
 from fastapi import Request
+import traceback
 
 from app.models.enums import Role, JurisdictionType
 from app.authorization.permissions import PermissionRegistry
@@ -8,6 +9,7 @@ from app.repositories.catalyst_officer_repo import CatalystOfficerRepository
 from app.services.officer_service import OfficerService
 from app.security.jwt import create_access_token
 from app.security.utils import raise_unauthorized, verify_password
+from app.core.logger import logger
 
 
 class AuthService:
@@ -79,8 +81,8 @@ class AuthService:
                 from datetime import datetime
                 if datetime.fromisoformat(locked_until) > datetime.now(datetime.now().astimezone().tzinfo):
                     raise_unauthorized("Account is temporarily locked due to too many failed attempts.")
-            except Exception:
-                pass
+            except Exception as exception:
+                logger.warning("Failed to parse locked_until: %s\n%s", exception, traceback.format_exc())
 
         hashed_password = self._get_attr(officer, "hashed_password")
         if not hashed_password:

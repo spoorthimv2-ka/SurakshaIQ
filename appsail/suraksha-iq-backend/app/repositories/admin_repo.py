@@ -65,7 +65,7 @@ class AdminRepository(BaseCatalystRepository):
             raise RepositoryError(f"Failed to fetch officer: {e}")
 
     async def create_user(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Creates a new user in the User table."""
+        """Creates a new user in the AppUser table."""
         try:
             return await self.user_repo.create(data)
         except CatalystError as e:

@@ -32,18 +32,18 @@ async def main() -> None:
 
     # --- Districts --------------------------------------------------------
     d1 = ds.table("District").insert_row({
-        "name": "Central District", "state": "Karnataka", "status": "ACTIVE",
+        "name": "Central District", "state": "Karnataka", "status": "ACTIVE", "code": "DIST-CENTRAL",
     })
     d2 = ds.table("District").insert_row({
-        "name": "North District", "state": "Karnataka", "status": "ACTIVE",
+        "name": "North District", "state": "Karnataka", "status": "ACTIVE", "code": "DIST-NORTH",
     })
 
     # --- Police Stations --------------------------------------------------
     s1 = ds.table("PoliceStation").insert_row({
-        "name": "Central PS", "district_id": d1["ROWID"], "status": "ACTIVE",
+        "name": "Central PS", "station_code": "STN-CENTRAL", "district_id": d1["ROWID"], "status": "ACTIVE",
     })
     s2 = ds.table("PoliceStation").insert_row({
-        "name": "North PS", "district_id": d2["ROWID"], "status": "ACTIVE",
+        "name": "North PS", "station_code": "STN-NORTH", "district_id": d2["ROWID"], "status": "ACTIVE",
     })
 
     # --- Demo Officer (idempotent) -----------------------------------------
@@ -83,12 +83,15 @@ async def main() -> None:
             "title": f"Demo {ctype} #{len(crimes)+1}",
             "crime_type": ctype,
             "description": "Seeded for demo",
+            "incident_date": now.isoformat(),
             "district_id": did,
             "station_id": sid,
             "status": "ACTIVE",
             "latitude": 12.97 + lat_offset * 0.01,
             "longitude": 77.59 + lat_offset * 0.01,
             "address": f"Seed address {len(crimes)+1}",
+            "location": f"Seed location {len(crimes)+1}",
+            "fir_number": f"FIR-DEMO-{len(crimes)+1:03d}",
         })
         crimes.append(crime)
 
@@ -131,6 +134,7 @@ async def main() -> None:
             "officer_id": officer_rowid,
             "status": "ACTIVE",
             "description": "Seeded FIR",
+            "fir_date": now.isoformat(),
         })
 
     # --- Alerts (2) -------------------------------------------------------
@@ -140,6 +144,9 @@ async def main() -> None:
         "status": "ACTIVE",
         "message": "Demo alert: unusual theft spike in Central District",
         "district_id": d1["ROWID"],
+        "title": "Crime Spike Alert",
+        "description": "Unusual theft spike detected in Central District",
+        "source": "SYSTEM",
     })
     ds.table("Alert").insert_row({
         "type": "ANOMALY",
@@ -147,6 +154,9 @@ async def main() -> None:
         "status": "ACTIVE",
         "message": "Demo alert: repeat offender activity detected in North PS",
         "district_id": d2["ROWID"],
+        "title": "Anomaly Alert",
+        "description": "Repeat offender activity detected in North PS",
+        "source": "SYSTEM",
     })
 
     # --- Optional: pre-computed hotspot cluster ---------------------------

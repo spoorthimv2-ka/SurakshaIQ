@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -251,8 +252,8 @@ def verify_connection() -> Any:
         try:
             project_id = app.config.get("project_id") if hasattr(app, "config") else None
             environment = app.config.get("environment") if hasattr(app, "config") else None
-        except Exception:
-            pass
+        except Exception as exception:
+            app_logger.error("[BOOTSTRAP] Failed to read project config: %s\n%s", exception, traceback.format_exc())
         app_logger.info("[BOOTSTRAP] Connected Project ID: %s", project_id)
         app_logger.info("[BOOTSTRAP] Environment: %s", environment)
         return app
@@ -267,7 +268,8 @@ def verify_connection() -> Any:
 def _get_requester(app) -> Optional[Any]:
     try:
         return app.datastore()._requester
-    except Exception:
+    except Exception as exception:
+        app_logger.warning("[BOOTSTRAP] Failed to get requester: %s\n%s", exception, traceback.format_exc())
         return None
 
 
@@ -280,8 +282,8 @@ def inspect_datastore(app) -> Dict[str, Dict[str, Any]]:
             name = info.get("table_name") or ""
             if name:
                 tables[name] = info
-    except Exception:
-        pass
+    except Exception as exception:
+        app_logger.error("[BOOTSTRAP] inspect_datastore failed: %s\n%s", exception, traceback.format_exc())
     return tables
 
 
@@ -296,8 +298,8 @@ def _list_existing_columns(app, table_id_or_name: str) -> List[Dict[str, Any]]:
             cols = data
         else:
             cols = data if data else []
-    except CatalystError:
-        pass
+    except CatalystError as exception:
+        app_logger.warning("[BOOTSTRAP] Failed to list columns for %s: %s\n%s", table_id_or_name, exception, traceback.format_exc())
     return cols
 
 
@@ -306,8 +308,8 @@ def check_sdk_capabilities(app) -> Dict[str, bool]:
     try:
         inspect_datastore(app)
         caps["schema_inspection"] = True
-    except Exception:
-        pass
+    except Exception as exception:
+        app_logger.error("[BOOTSTRAP] SDK capability check failed: %s\n%s", exception, traceback.format_exc())
     if _get_requester(app) is not None:
         caps["table_creation"] = True
         caps["column_creation"] = True
@@ -481,7 +483,8 @@ def _triage_rows_by_schema(
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     try:
         mod = __import__(f"app.schemas.{table_name.lower()}", fromlist=["*"])
-    except Exception:
+    except Exception as exception:
+        app_logger.warning("[TEMP] Schema import failed for %s: %s\n%s", table_name, exception, traceback.format_exc())
         return rows, []
     schema_name = None
     for name in ("Response", "Create", "Base"):
@@ -492,14 +495,16 @@ def _triage_rows_by_schema(
         return rows, []
     try:
         Schema = getattr(mod, schema_name)
-    except Exception:
+    except Exception as exception:
+        app_logger.warning("[TEMP] Schema attribute lookup failed for %s: %s\n%s", table_name, exception, traceback.format_exc())
         return rows, []
     valid, invalid = [], []
     for row in rows:
         try:
             Schema.model_validate(row)
             valid.append(row)
-        except Exception:
+        except Exception as exception:
+            app_logger.warning("[TEMP] Schema validation failed for row in %s: %s\n%s", table_name, exception, traceback.format_exc())
             invalid.append(row)
     return valid, invalid
 
@@ -541,8 +546,8 @@ def _seed_table(app, table_name: str, rows: List[Dict[str, Any]]) -> Tuple[int, 
                 inserted += 1
             else:
                 skipped += 1
-        except CatalystError:
-            pass
+        except CatalystError as exception:
+            app_logger.warning("[TEMP] Insert failed in %s: %s\n%s", table_name, exception, traceback.format_exc())
     return inserted, skipped
 
 
@@ -554,7 +559,8 @@ def _row_exists(app, table_name: str, field: str, value: Any) -> bool:
         q = f"SELECT ROWID FROM {table_name} WHERE {field} = '{safe}' LIMIT 1"
         result = app.zcql().execute_query(q)
         return result and len(result) > 0
-    except Exception:
+    except Exception as exception:
+        app_logger.warning("[TEMP] Row exists check failed for %s.%s: %s\n%s", table_name, field, exception, traceback.format_exc())
         return False
 
 
@@ -592,12 +598,12 @@ def seed_demo_data(app) -> Tuple[int, int]:
 
         d1, d2 = None, None
         if not _row_exists(app, "District", "name", "Central District"):
-            d1 = dist_tbl.insert_row({"name": "Central District", "state": "Karnataka", "status": "ACTIVE"})
+            d1 = dist_tbl.insert_row({"name": "Central District", "state": "Karnataka", "status": "ACTIVE", "code": "DIST-CENTRAL"})
             inserted += 1
         else:
             skipped += 1
         if not _row_exists(app, "District", "name", "North District"):
-            d2 = dist_tbl.insert_row({"name": "North District", "state": "Karnataka", "status": "ACTIVE"})
+            d2 = dist_tbl.insert_row({"name": "North District", "state": "Karnataka", "status": "ACTIVE", "code": "DIST-NORTH"})
             inserted += 1
         else:
             skipped += 1
@@ -618,12 +624,12 @@ def seed_demo_data(app) -> Tuple[int, int]:
 
         s1, s2 = None, None
         if d1rid and not _row_exists(app, "PoliceStation", "name", "Central PS"):
-            s1 = stn_tbl.insert_row({"name": "Central PS", "district_id": d1rid, "status": "ACTIVE"})
+            s1 = stn_tbl.insert_row({"name": "Central PS", "station_code": "STN-CENTRAL", "district_id": d1rid, "status": "ACTIVE"})
             inserted += 1
         else:
             skipped += 1
         if d2rid and not _row_exists(app, "PoliceStation", "name", "North PS"):
-            s2 = stn_tbl.insert_row({"name": "North PS", "district_id": d2rid, "status": "ACTIVE"})
+            s2 = stn_tbl.insert_row({"name": "North PS", "station_code": "STN-NORTH", "district_id": d2rid, "status": "ACTIVE"})
             inserted += 1
         else:
             skipped += 1
@@ -653,6 +659,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "badge_number": demo_badge,
                 "role": "SYSTEM_ADMINISTRATOR",
                 "hashed_password": hashed,
+                "catalyst_user_id": "USR-DEMO-001",
                 "police_station_id": s1rid,
                 "status": "ACTIVE",
             })
@@ -679,12 +686,15 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "title": title,
                 "crime_type": ctype,
                 "description": "Seeded for demo",
+                "incident_date": now,
                 "district_id": did,
                 "station_id": sid,
                 "status": "ACTIVE",
                 "latitude": 12.97 + lat_offset * 0.01,
                 "longitude": 77.59 + lat_offset * 0.01,
                 "address": f"Seed address {len(crimes)+1}",
+                "location": f"Seed location {len(crimes)+1}",
+                "fir_number": f"FIR-DEMO-{len(crimes)+1:03d}",
             })
             crimes.append(c)
             inserted += 1
@@ -727,6 +737,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "officer_id": officer_rowid or "",
                 "status": "ACTIVE",
                 "description": "Seeded FIR",
+                "fir_date": now,
             })
             inserted += 1
 
@@ -736,6 +747,9 @@ def seed_demo_data(app) -> Tuple[int, int]:
             "status": "ACTIVE",
             "message": "Demo alert: unusual theft spike in Central District",
             "district_id": d1rid,
+            "title": "Crime Spike Alert",
+            "description": "Unusual theft spike detected in Central District",
+            "source": "SYSTEM",
         })
         inserted += 1
         alert_tbl.insert_row({
@@ -744,6 +758,9 @@ def seed_demo_data(app) -> Tuple[int, int]:
             "status": "ACTIVE",
             "message": "Demo alert: repeat offender activity detected in North PS",
             "district_id": d2rid,
+            "title": "Anomaly Alert",
+            "description": "Repeat offender activity detected in North PS",
+            "source": "SYSTEM",
         })
         inserted += 1
 
@@ -761,7 +778,8 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "scored_at": now,
             })
             inserted += 1
-        except Exception:
+        except Exception as exception:
+            app_logger.warning("[TEMP] Hotspot cluster insert failed: %s\n%s", exception, traceback.format_exc())
             skipped += 1
 
         try:
@@ -777,10 +795,13 @@ def seed_demo_data(app) -> Tuple[int, int]:
                 "scored_at": now,
             })
             inserted += 1
-        except Exception:
+        except Exception as exception:
+            app_logger.warning("[TEMP] Prediction ledger insert failed: %s\n%s", exception, traceback.format_exc())
             skipped += 1
-    except Exception:
-        pass
+    except Exception as exception:
+        print(type(exception))
+        print(str(exception))
+        print(traceback.format_exc())
     return inserted, skipped
 
 
@@ -794,9 +815,10 @@ def create_default_users(app) -> Tuple[int, int]:
     dist_rows = dist_rows.get("data", [])
     if not dist_rows:
         try:
-            d = districts_tbl.insert_row({"name": "Default District", "state": "Karnataka", "status": "ACTIVE"})
+            d = districts_tbl.insert_row({"name": "Default District", "state": "Karnataka", "status": "ACTIVE", "code": "DIST-DEFAULT"})
             dist_rows = [d]
-        except Exception:
+        except Exception as exception:
+            app_logger.error("[TEMP] Default district insert failed: %s\n%s", exception, traceback.format_exc())
             return 0, 0
 
     stn_rows = stations_tbl.get_paged_rows(max_rows=100) or {}
@@ -805,11 +827,13 @@ def create_default_users(app) -> Tuple[int, int]:
         try:
             s = stations_tbl.insert_row({
                 "name": "Default Station",
+                "station_code": "STN-DEFAULT",
                 "district_id": dist_rows[0].get("ROWID", ""),
                 "status": "ACTIVE",
             })
             stn_rows = [s]
-        except Exception:
+        except Exception as exception:
+            app_logger.error("[TEMP] Default police station insert failed: %s\n%s", exception, traceback.format_exc())
             return 0, 0
 
     stn_id = stn_rows[0].get("ROWID", "")
@@ -857,7 +881,8 @@ def create_default_users(app) -> Tuple[int, int]:
                 created += 1
             else:
                 skipped += 1
-        except Exception:
+        except Exception as exception:
+            app_logger.warning("[TEMP] Default officer creation failed: %s\n%s", exception, traceback.format_exc())
             skipped += 1
 
         user_row: Dict[str, Any] = {
@@ -871,7 +896,7 @@ def create_default_users(app) -> Tuple[int, int]:
         try:
             is_dup = False
             safe_email = str(email).replace(chr(39), chr(39) + chr(39))
-            q = f"SELECT ROWID FROM User WHERE email = '{safe_email}' LIMIT 1"
+            q = f"SELECT ROWID FROM AppUser WHERE email = '{safe_email}' LIMIT 1"
             result = app.zcql().execute_query(q)
             if result and len(result) > 0:
                 is_dup = True
@@ -880,7 +905,8 @@ def create_default_users(app) -> Tuple[int, int]:
                 created += 1
             else:
                 skipped += 1
-        except Exception:
+        except Exception as exception:
+            app_logger.warning("[TEMP] Default user creation failed: %s\n%s", exception, traceback.format_exc())
             skipped += 1
 
     return created, skipped
@@ -897,8 +923,8 @@ def verify_integrity(app) -> List[str]:
         district_count = len(app.datastore().table("District").get_paged_rows(max_rows=1).get("data", []))
         if district_count == 0:
             errors.append("No districts found in District table")
-    except Exception:
-        pass
+    except Exception as exception:
+        app_logger.error("[TEMP] Integrity verification failed: %s\n%s", exception, traceback.format_exc())
     return errors
 
 
@@ -1023,7 +1049,7 @@ def bootstrap() -> Dict[str, Any]:
         errors.append(f"Integrity verification failed: {exc}")
 
     summary["errors"] = errors
-    summary["success"] = True
-    app_logger.info("[TEMP] bootstrap() completed successfully")
+    summary["success"] = len(errors) == 0
+    app_logger.info("[TEMP] bootstrap() completed with status: %s", summary["success"])
     return summary
 

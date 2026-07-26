@@ -7,7 +7,7 @@ from app.core.logger import logger
 
 class UserRepository(BaseCatalystRepository):
     """
-    Repository for User entity backed by Catalyst Data Store.
+    Repository for AppUser entity backed by Catalyst Data Store.
     """
     def __init__(self, request: Request):
         super().__init__(request, table_name="AppUser")

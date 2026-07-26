@@ -7,6 +7,7 @@ from app.api.deps import get_current_officer
 from app.repositories.base_repository import BaseCatalystRepository
 from app.core.exceptions import RepositoryError
 from app.core.logger import logger
+import traceback
 from app.schemas.settings import (
     UserSettings,
     SystemSettings,
@@ -95,8 +96,8 @@ class SettingsService:
                     read_at=item.get("read_at"),
                     metadata=item.get("metadata", {}),
                 ))
-        except Exception:
-            pass
+        except Exception as exception:
+            logger.warning("Failed to load notifications: %s\n%s", exception, traceback.format_exc())
         if not notifications:
             notifications = [
                 Notification(
