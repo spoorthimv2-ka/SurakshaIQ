@@ -37,7 +37,11 @@ class Settings(BaseSettings):
     # Security
     dev_skip_auth: bool = False
     mock_catalyst_data: bool = False
-    cors_origins: list[str] = []
+    cors_origins: list[str] =  [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://surakshaiq-60078728338.development.catalystserverless.in",
+    ]
 
     # AI / Catalyst AI
     ai_provider: str = "catalyst"
