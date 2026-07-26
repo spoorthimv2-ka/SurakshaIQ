@@ -15,7 +15,7 @@ class AdminRepository(BaseCatalystRepository):
     Reuses existing repositories for data retrieval.
     """
     def __init__(self, request: Request):
-        super().__init__(request, table_name="User")
+        super().__init__(request, table_name="AppUser")
         self.user_repo = UserRepository(request)
         self.officer_repo = OfficerRepository(request)
         self.district_repo = DistrictRepository(request)

@@ -22,7 +22,7 @@ from app.schemas.settings import (
 class SettingsService:
     def __init__(self, request: Request):
         self.request = request
-        self.repo = BaseCatalystRepository(request, table_name="User")
+        self.repo = BaseCatalystRepository(request, table_name="AppUser")
 
     async def get_user_settings(self, officer: Dict[str, Any]) -> UserSettings:
         user_id = officer.get("ROWID", officer.get("id", ""))

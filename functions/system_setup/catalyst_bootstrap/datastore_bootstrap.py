@@ -142,7 +142,7 @@ TABLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             {"column_name": "status", "data_type": "varchar", "max_length": 20, "is_mandatory": False, "default_value": "ACTIVE"},
         ]
     },
-    "User": {
+    "AppUser": {
         "columns": [
             {"column_name": "name", "data_type": "varchar", "max_length": 150, "is_mandatory": True},
             {"column_name": "email", "data_type": "varchar", "max_length": 255, "is_mandatory": True, "is_unique": True},
@@ -470,7 +470,7 @@ def _get_table_key(table_name: str) -> Optional[str]:
         "Crime": "fir_number",
         "FIR": "fir_number",
         "Officer": "badge_number",
-        "User": "email",
+        "AppUser": "email",
         "CrimeHotspotCluster": "cluster_id",
     }
     return mapping.get(table_name, "ROWID")
@@ -579,7 +579,7 @@ def seed_demo_data(app) -> Tuple[int, int]:
         dist_tbl = app.datastore().table("District")
         stn_tbl = app.datastore().table("PoliceStation")
         off_tbl = app.datastore().table("Officer")
-        usr_tbl = app.datastore().table("User")
+        usr_tbl = app.datastore().table("AppUser")
         crm_tbl = app.datastore().table("Criminal")
         crime_tbl = app.datastore().table("Crime")
         link_tbl = app.datastore().table("CrimeCriminalLink")
@@ -788,7 +788,7 @@ def create_default_users(app) -> Tuple[int, int]:
     districts_tbl = app.datastore().table("District")
     stations_tbl = app.datastore().table("PoliceStation")
     officers_tbl = app.datastore().table("Officer")
-    users_tbl = app.datastore().table("User")
+    users_tbl = app.datastore().table("AppUser")
 
     dist_rows = districts_tbl.get_paged_rows(max_rows=100) or {}
     dist_rows = dist_rows.get("data", [])

@@ -10,7 +10,7 @@ class UserRepository(BaseCatalystRepository):
     Repository for User entity backed by Catalyst Data Store.
     """
     def __init__(self, request: Request):
-        super().__init__(request, table_name="User")
+        super().__init__(request, table_name="AppUser")
 
     async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Retrieves a user by their email address."""

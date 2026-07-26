@@ -57,7 +57,7 @@ ALLOWED_COLUMNS: Dict[str, Tuple[str, ...]] = {
         "linked_by_officer_id", "linked_at", "notes",
         "CREATEDTIME", "MODIFIEDTIME",
     ),
-    "User": (
+    "AppUser": (
         "ROWID", "name", "email", "role", "status",
         "CREATEDTIME", "MODIFIEDTIME",
     ),

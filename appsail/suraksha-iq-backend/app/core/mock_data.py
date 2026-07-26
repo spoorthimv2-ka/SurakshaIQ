@@ -26,7 +26,7 @@ _MOCK_DATA: Dict[str, List[Dict[str, Any]]] = {
     "Alert": [],
     "Report": [],
     "Officer": [],
-    "User": [],
+    "AppUser": [],
     "CrimeCriminalLink": [],
     "CrimeHotspotCluster": [],
     "PredictionLedger": [],
@@ -366,7 +366,7 @@ def _seed_large_dataset() -> None:
             "police_station_id": rng.choice(stn_map.get(did, [{"ROWID": "STN-001"}]))["ROWID"],
             "status": "ACTIVE",
         }))
-        _MOCK_DATA["User"].append(_make_row({
+        _MOCK_DATA["AppUser"].append(_make_row({
             "ROWID": f"USR-{str(i).zfill(3)}",
             "name": f"Officer {i}",
             "email": f"officer{i}@suraksha.test",
