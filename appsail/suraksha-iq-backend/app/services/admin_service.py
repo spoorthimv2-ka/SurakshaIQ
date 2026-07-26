@@ -195,15 +195,15 @@ class AdminService:
         logger.info("Fetching audit logs")
         return await self.repo.get_audit_logs(limit=limit, offset=offset)
 
-    async def create_audit_log(self, action: str, user: str, target: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create_audit_log(self, action: str, user_id: str, target: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Creates an audit log entry."""
-        logger.info(f"Creating audit log: {action} by {user} on {target}")
+        logger.info(f"Creating audit log: {action} by {user_id} on {target}")
         import uuid
         from datetime import datetime, timezone
         log_data = {
             "log_id": str(uuid.uuid4()),
             "action": action,
-            "user": user,
+            "user_id": user_id,
             "target": target,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {},

@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -190,7 +191,7 @@ TABLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "columns": [
             {"column_name": "log_id", "data_type": "varchar", "max_length": 100, "is_mandatory": False},
             {"column_name": "action", "data_type": "varchar", "max_length": 100, "is_mandatory": True},
-            {"column_name": "user", "data_type": "varchar", "max_length": 50, "is_mandatory": True},
+            {"column_name": "user_id", "data_type": "varchar", "max_length": 50, "is_mandatory": True},
             {"column_name": "target", "data_type": "varchar", "max_length": 50, "is_mandatory": True},
             {"column_name": "metadata", "data_type": "json", "is_mandatory": False},
             {"column_name": "timestamp", "data_type": "datetime", "is_mandatory": True},
@@ -241,12 +242,25 @@ def _now_iso() -> str:
 
 
 def verify_connection() -> Any:
+    app_logger.info("[BOOTSTRAP] SDK initialization started")
     try:
-        app_logger.info("[TEMP] About to call zcatalyst_sdk.initialize_app()")
-        return zcatalyst_sdk.initialize_app()
+        app = zcatalyst_sdk.initialize()
+        app_logger.info("[BOOTSTRAP] SDK initialization successful")
+        project_id = None
+        environment = None
+        try:
+            project_id = app.config.get("project_id") if hasattr(app, "config") else None
+            environment = app.config.get("environment") if hasattr(app, "config") else None
+        except Exception:
+            pass
+        app_logger.info("[BOOTSTRAP] Connected Project ID: %s", project_id)
+        app_logger.info("[BOOTSTRAP] Environment: %s", environment)
+        return app
     except CatalystAppError as exc:
+        app_logger.exception("[BOOTSTRAP] SDK initialization failed with CatalystAppError")
         raise RuntimeError(f"Catalyst authentication failed: {exc}") from exc
     except Exception as exc:
+        app_logger.exception("[BOOTSTRAP] SDK initialization failed with unexpected error")
         raise RuntimeError(f"Unexpected error during Catalyst initialization: {exc}") from exc
 
 
@@ -302,7 +316,7 @@ def check_sdk_capabilities(app) -> Dict[str, bool]:
 
 def _try_create_table(
     requester: AuthorizedHttpClient, table_name: str, columns: List[Dict[str, Any]]
-) -> Tuple[bool, Optional[Dict[str, Any]]]:
+) -> Dict[str, Any]:
     payload: Dict[str, Any] = {"table_name": table_name, "table_scope": "GLOBAL", "columns": []}
     body_cols = []
     for c in columns:
@@ -323,30 +337,84 @@ def _try_create_table(
             item["max_length"] = c.get("max_length", 255)
         body_cols.append(item)
     payload["columns"] = body_cols
+    endpoint = "/table"
+    base_url = getattr(requester, "_base_url", None) or "APP_DOMAIN_DEFAULT"
+    app_logger.info("[TEMP] Creating table %s...", table_name)
+    app_logger.info("[TEMP] HTTP endpoint: POST %s%s", base_url, endpoint)
+    app_logger.info("[TEMP] Payload: %s", json.dumps(payload, default=str))
     try:
         resp = requester.request(
             method=RequestMethod.POST,
-            path="/table",
+            path=endpoint,
             user=DATASCOPE_ADMIN,
             json=payload,
         )
-        data = resp.response_json.get("data") if isinstance(resp.response_json, dict) else None
+        status_code = getattr(resp, "status_code", None)
+        response_body = resp.response_json if isinstance(resp.response_json, dict) else {"raw": str(resp.response_json)}
+        app_logger.info("[TEMP] HTTP response code: %s", status_code)
+        app_logger.info("[TEMP] Response body: %s", json.dumps(response_body, default=str))
+        data = response_body.get("data")
         if data:
-            return True, data
-        return True, resp.response_json
-    except (CatalystAPIError, CatalystError, Exception):
-        return False, None
+            app_logger.info("[TEMP] Success: table %s created", table_name)
+            return {
+                "success": True,
+                "table_name": table_name,
+                "response": response_body,
+                "status_code": status_code,
+            }
+        app_logger.error("[TEMP] Failure: table %s creation returned no data. Response: %s", table_name, json.dumps(response_body, default=str))
+        return {
+            "success": False,
+            "table_name": table_name,
+            "error": "NO_DATA",
+            "response": response_body,
+            "status_code": status_code,
+        }
+    except CatalystAPIError as exc:
+        app_logger.error("[TEMP] Failure: table %s raised CatalystAPIError: %s", table_name, exc)
+        return {
+            "success": False,
+            "table_name": table_name,
+            "error": str(exc),
+            "error_type": "CatalystAPIError",
+            "response": getattr(exc, "args", [None])[0] if exc.args else None,
+            "status_code": getattr(exc, "http_status_code", None),
+        }
+    except CatalystError as exc:
+        app_logger.error("[TEMP] Failure: table %s raised CatalystError: %s", table_name, exc)
+        return {
+            "success": False,
+            "table_name": table_name,
+            "error": str(exc),
+            "error_type": "CatalystError",
+            "response": None,
+            "status_code": None,
+        }
+    except Exception as exc:
+        app_logger.exception("[TEMP] Failure: table %s raised unexpected error", table_name)
+        return {
+            "success": False,
+            "table_name": table_name,
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+            "response": None,
+            "status_code": None,
+        }
 
 
-def create_tables(app, requester, existing: Dict[str, Dict[str, Any]]) -> int:
+def create_tables(app, requester, existing: Dict[str, Dict[str, Any]]) -> Tuple[int, List[Dict[str, Any]]]:
     created = 0
+    failures: List[Dict[str, Any]] = []
     for table_name in TABLE_DEFINITIONS:
         if table_name in existing:
             continue
-        ok, _ = _try_create_table(requester, table_name, TABLE_DEFINITIONS[table_name]["columns"])
-        if ok:
+        app_logger.info("[TEMP] Attempting to create table: %s", table_name)
+        result = _try_create_table(requester, table_name, TABLE_DEFINITIONS[table_name]["columns"])
+        if result.get("success"):
             created += 1
-    return created
+        else:
+            failures.append(result)
+    return created, failures
 
 
 def _try_create_column(
@@ -876,6 +944,7 @@ def bootstrap() -> Dict[str, Any]:
         return summary
 
     requester = _get_requester(app)
+    app_logger.info("[BOOTSTRAP] Datastore client created")
     app_logger.info("[TEMP] About to call check_sdk_capabilities()")
     capabilities = check_sdk_capabilities(app)
     summary["sdk_capabilities"] = capabilities
@@ -891,11 +960,18 @@ def bootstrap() -> Dict[str, Any]:
 
     if capabilities["table_creation"] and requester:
         app_logger.info("[TEMP] About to call create_tables()")
-        created = create_tables(app, requester, existing)
+        created, table_failures = create_tables(app, requester, existing)
         summary["tables_created"] = created
         app_logger.info("[TEMP] Tables created: %s", created)
         if created == 0 and len(existing) == 0:
             errors.append("Table creation is supported but no tables were created.")
+        if table_failures:
+            for failure in table_failures:
+                errors.append(
+                    f"Table creation failed for {failure.get('table_name')}: "
+                    f"status={failure.get('status_code')} error={failure.get('error')} "
+                    f"response={json.dumps(failure.get('response'), default=str)}"
+                )
         app_logger.info("[TEMP] About to call inspect_datastore() again")
         existing = inspect_datastore(app)
     else:
@@ -950,7 +1026,4 @@ def bootstrap() -> Dict[str, Any]:
     summary["success"] = True
     app_logger.info("[TEMP] bootstrap() completed successfully")
     return summary
-
-
-
 

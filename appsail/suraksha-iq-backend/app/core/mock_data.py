@@ -346,7 +346,7 @@ def _seed_large_dataset() -> None:
             "ROWID": f"AUDIT-{str(i).zfill(3)}",
             "log_id": f"AUDIT-{str(i).zfill(3)}",
             "action": rng.choice(["LOGIN", "LOGOUT", "CREATE_FIR", "UPDATE_CASE", "SEARCH"]),
-            "user": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
+            "user_id": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "target": f"OFF-{str(rng.randint(1, 5)).zfill(3)}",
             "metadata": {"ip": "127.0.0.1"},
             "timestamp": rand_ts(),

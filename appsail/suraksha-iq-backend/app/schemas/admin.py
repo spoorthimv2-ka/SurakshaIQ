@@ -56,7 +56,7 @@ class AdminStatistics(BaseModel):
 class AuditLog(BaseModel):
     log_id: str
     action: str
-    user: str
+    user_id: str
     target: str
     timestamp: str
     metadata: Dict[str, Any] = {}

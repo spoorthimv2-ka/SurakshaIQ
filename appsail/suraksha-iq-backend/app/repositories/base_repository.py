@@ -62,7 +62,7 @@ ALLOWED_COLUMNS: Dict[str, Tuple[str, ...]] = {
         "CREATEDTIME", "MODIFIEDTIME",
     ),
     "AuditLog": (
-        "ROWID", "action", "user", "target", "metadata", "created_at",
+        "ROWID", "action", "user_id", "target", "metadata", "timestamp",
     ),
     "Search": (),
     "CrimeHotspotCluster": (

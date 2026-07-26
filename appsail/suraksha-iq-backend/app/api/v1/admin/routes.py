@@ -83,7 +83,7 @@ async def create_user(
         result = await service.create_user(user_data.model_dump())
         await service.create_audit_log(
             action="CREATE_USER",
-            user=current_user.get("email", current_user.get("user_id", "")),
+            user_id=current_user.get("email", current_user.get("user_id", "")),
             target=result.get("user_id", ""),
             metadata={"email": user_data.email, "role": user_data.role.value},
         )
@@ -115,7 +115,7 @@ async def update_user(
         result = await service.update_user(user_id, user_data.model_dump(exclude_none=True))
         await service.create_audit_log(
             action="UPDATE_USER",
-            user=current_user.get("email", current_user.get("user_id", "")),
+            user_id=current_user.get("email", current_user.get("user_id", "")),
             target=user_id,
             metadata=user_data.model_dump(exclude_none=True),
         )
@@ -145,7 +145,7 @@ async def delete_user(
         result = await service.delete_user(user_id)
         await service.create_audit_log(
             action="DELETE_USER",
-            user=current_user.get("email", current_user.get("user_id", "")),
+            user_id=current_user.get("email", current_user.get("user_id", "")),
             target=user_id,
             metadata={},
         )
@@ -176,7 +176,7 @@ async def activate_user(
         result = await service.activate_user(user_id)
         await service.create_audit_log(
             action="ACTIVATE_USER",
-            user=current_user.get("email", current_user.get("user_id", "")),
+            user_id=current_user.get("email", current_user.get("user_id", "")),
             target=user_id,
             metadata={},
         )
@@ -207,7 +207,7 @@ async def deactivate_user(
         result = await service.deactivate_user(user_id)
         await service.create_audit_log(
             action="DEACTIVATE_USER",
-            user=current_user.get("email", current_user.get("user_id", "")),
+            user_id=current_user.get("email", current_user.get("user_id", "")),
             target=user_id,
             metadata={},
         )
